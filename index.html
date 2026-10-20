@@ -33,6 +33,9 @@ button.main{background:var(--acc);color:#fff;box-shadow:0 4px 0 #b8255c}
 button.big{font-size:20px;padding:15px 0;width:min(260px,72vw)}
 button.sec{background:rgba(255,255,255,.85);width:min(260px,72vw)}
 button.on{background:var(--ink);color:#fff}
+button.bi{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+button.bi svg{flex:none}
+button.sq{width:52px;height:46px;padding:0;display:flex;align-items:center;justify-content:center}
 svg{display:block}
 .row{display:flex;gap:10px}
 .col{display:flex;flex-direction:column;align-items:center;gap:12px}
@@ -51,7 +54,7 @@ svg{display:block}
 .logo .l2 b{display:inline-block;color:#fff;-webkit-text-stroke:2px var(--ink);paint-order:stroke}
 .logo .l2 b:nth-child(2){color:var(--acc2);transform:translateY(-4px)}
 .logo .l2 b:nth-child(4){color:var(--mint);transform:translateY(-3px)}
-#titleCv{width:160px;height:170px}
+#titleCv{width:160px;height:min(170px,20dvh);flex:none}
 .tbest{margin:0;font-size:14px;font-weight:900;color:var(--sub);min-height:1em}
 .ver{position:absolute;right:12px;bottom:10px;font-size:11px;color:var(--sub);font-weight:700}
 /* 描く */
@@ -64,8 +67,8 @@ svg{display:block}
 #tools button{padding:0;width:50px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:0;background:rgba(255,255,255,.7);box-shadow:none}
 #tools button.on{background:var(--ink)}
 #tpl{width:min(calc(100vw - 32px),330px,44dvh);display:flex;gap:2px}
-#tpl button{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 4px;font-size:13px;border-radius:0;background:rgba(255,255,255,.7);box-shadow:none}
-#tpl canvas{width:30px;height:30px}
+#tpl button{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:5px 4px;font-size:13px;border-radius:0;background:rgba(255,255,255,.7);box-shadow:none}
+#tpl canvas{width:34px;height:34px}
 #tplLbl{font-size:11px;font-weight:800;color:var(--sub);margin:-8px 0 -6px}
 /* 結果（能力） */
 .kicker{margin:0;font-size:14px;font-weight:900;color:var(--sub)}
@@ -76,12 +79,12 @@ svg{display:block}
 #effLine{margin:-10px 0 0;font-size:14px;font-weight:900;color:var(--ink)}
 #overEff{display:block;font-size:11px;color:var(--sub);font-weight:800}
 /* 特殊効果の説明：アニメーションと、どうなる・操作・コツ */
-.ef .ehb{grid-column:2;grid-row:1;padding:5px 11px;font-size:12px;background:var(--ink);color:#fff;box-shadow:none}
+.ef .ehb{grid-column:2;grid-row:1/3;align-self:center;width:40px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;background:var(--ink);color:#fff;box-shadow:none;border-radius:0}
 #effHelp{justify-content:center;gap:10px}
 #ehCv{width:min(300px,86vw);aspect-ratio:300/210;background:#cdeeff;display:block}
 #ehTxt{width:min(300px,86vw);display:grid}
-#ehTxt p{margin:0;font-size:14px;font-weight:800;line-height:1.5;padding:8px 2px;border-top:1px solid rgba(255,255,255,.18)}
-#ehTxt p b{display:inline-block;min-width:4em;color:var(--acc2);font-size:12px}
+#ehTxt p{margin:0;font-size:14px;font-weight:800;line-height:1.5;padding:8px 2px;border-top:1px solid rgba(255,255,255,.18);display:grid;grid-template-columns:30px 1fr;gap:6px;align-items:start}
+#ehTxt p b{color:var(--acc2);padding-top:1px}
 #bEffH{pointer-events:auto;font-size:18px;font-weight:900}
 #ablbox{padding:12px 4px;border-top:3px solid var(--ink);border-bottom:3px solid var(--ink)}
 #abl{display:flex;flex-direction:column;gap:12px;min-width:236px}
@@ -89,7 +92,7 @@ svg{display:block}
 .ef b{font-size:17px}
 .ef span{color:var(--acc2);font-size:19px;letter-spacing:.04em;text-shadow:0 1px 0 rgba(29,36,64,.35)}
 .ef i{font-style:normal;color:rgba(29,36,64,.13);text-shadow:none}
-.ef small{grid-column:1/3;font-size:12px;color:var(--sub);font-weight:700}
+.ef small{grid-column:1;font-size:12px;color:var(--sub);font-weight:700}
 button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padding:6px;text-decoration:underline}
 #raw{position:absolute;left:8px;bottom:8px;font-family:ui-monospace,Consolas,monospace;font-size:9px;color:var(--sub);white-space:pre;margin:0;pointer-events:none}
 /* 遊び中 */
@@ -140,7 +143,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 .ov{position:absolute;inset:0;display:none;background:#1d2440;color:#fff;flex-direction:column;align-items:center;padding:24px 16px 16px;gap:12px;z-index:9;overflow-y:auto}
 .ov.on{display:flex}
 .ov h3{margin:6px 0 0;font-size:20px;font-weight:900;letter-spacing:.08em}
-.ov .cls{opacity:.7;font-size:13px;margin:4px 0 0;font-weight:700}
+.ov .ovx{position:absolute;top:8px;right:8px;color:#fff}
 .ov .sub2{margin:-6px 0 0;font-size:13px;opacity:.8;font-weight:700}
 #chart,#recList,#zukList{display:grid;gap:0 12px;width:100%;max-width:340px}
 #chart{grid-template-columns:1fr 1fr}
@@ -150,6 +153,10 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 #chart div,.rec,.zk{display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,.15);font-size:13px;font-weight:800}
 #chart canvas,.rec canvas,.zk canvas{width:40px;height:40px;background:#fff;flex:none}
 #chart small,.rec small,.zk small{display:block;font-size:11px;opacity:.7;font-weight:700}
+#chart span{flex:1;min-width:0}
+#chart .go{flex:none;opacity:.55}
+#chart .go svg{width:14px;height:14px}
+@media (max-width:360px){#chart div{gap:6px;font-size:12px}#chart canvas{width:34px;height:34px}}
 .rec b{width:22px;text-align:center;font-size:15px;color:var(--acc2)}
 .rec span,.zk span{flex:1}
 .rec em,.zk em{font-style:normal;font-size:17px;font-weight:900}
@@ -161,6 +168,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 #rkName{flex:1;min-width:0;font-family:inherit;font-size:16px;font-weight:800;color:var(--ink);border:none;border-bottom:3px solid var(--ink);border-radius:0;padding:9px 10px;background:rgba(255,255,255,.75);-webkit-user-select:text;user-select:text;outline:none}
 #rkName:focus{border-color:var(--acc)}
 #rkGo{padding:9px 16px;font-size:14px;white-space:nowrap}
+#rkGo:disabled{background:var(--sub);box-shadow:none}
 #rkMsg{margin:0;font-size:13px;font-weight:800;color:var(--sub);min-height:1em;text-align:center}
 #rkMsg b{color:var(--acc)}
 .tabs{display:flex;gap:4px;border-bottom:1px solid rgba(255,255,255,.2)}
@@ -182,7 +190,25 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 .zkrank small{display:block;font-size:11px;opacity:.7;font-weight:700}
 .zkh{grid-column:1/3;margin:6px 0 -2px;font-size:13px;font-weight:900;opacity:.8}
 .zk canvas:empty{}
-.empty{opacity:.7;font-size:14px;font-weight:700;margin:20px 0}
+.empty{opacity:.7;font-size:14px;font-weight:700;margin:20px 0;grid-column:1/-1;text-align:center}
+@media (max-height:700px){
+  .scr{gap:10px;padding-top:52px;padding-bottom:12px}
+  #sTitle,#sOver,#sRes{padding-top:20px}
+  .logo .l1{font-size:19px}.logo .l2{font-size:clamp(38px,12vw,50px)}
+  button.big{font-size:18px;padding:12px 0}
+  #big{font-size:52px}
+  .card{padding:8px 8px}
+  .who{margin-top:4px}
+  #resCv{width:130px;height:130px}
+  #abl{gap:6px}
+}
+@media (max-height:600px){
+  .scr{gap:8px}
+  #big{font-size:44px}
+  #rank{font-size:15px}
+  #resCv{width:110px;height:110px}
+  button.sec{padding:10px 24px}
+}
 .toast{position:absolute;left:50%;bottom:16%;transform:translateX(-50%);background:var(--ink);color:#fff;font-weight:900;font-size:14px;padding:9px 16px;z-index:20;pointer-events:none;animation:pin .2s ease-out}
 </style>
 </head>
@@ -195,27 +221,27 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
     <canvas id="titleCv"></canvas>
     <p class="tbest" id="tBest"></p>
     <div class="col">
-      <button class="main big" id="bT30">30秒アタック</button>
-      <button class="sec" id="bTA">1000m タイムアタック</button>
-      <button class="sec" id="bTut">チュートリアル</button>
+      <button class="main big bi" id="bT30"><span class="i-timer"></span>30秒アタック</button>
+      <button class="sec bi" id="bTA"><span class="i-flag"></span>1000m タイムアタック</button>
+      <button class="sec bi" id="bTut"><span class="i-hand"></span>チュートリアル</button>
     </div>
     <div class="icons">
-      <button class="ic" id="bRec"><span class="i-trophy"></span><small>記録</small></button>
-      <button class="ic" id="bZuk"><span class="i-book"></span><small>図鑑</small></button>
-      <button class="ic" id="bHelp"><span class="i-shape"></span><small>かたち</small></button>
-      <button class="ic" id="bSnd2"><span class="i-snd"></span><small>音</small></button>
+      <button class="ic" id="bRec" aria-label="記録"><span class="i-trophy"></span></button>
+      <button class="ic" id="bZuk" aria-label="図鑑"><span class="i-book"></span></button>
+      <button class="ic" id="bHelp" aria-label="かたち"><span class="i-shape"></span></button>
+      <button class="ic" id="bSnd2" aria-label="音"><span class="i-snd"></span></button>
     </div>
     <div class="ver">ver. <span id="verTxt"></span></div>
   </div>
 
   <div class="scr" id="sDraw">
-    <div class="bar"><button class="ic sm" id="bHome"><span class="i-home"></span></button><h2>かたちを描く</h2><button class="ic sm" id="qbtn"><span class="i-shape"></span></button></div>
+    <div class="bar"><button class="ic sm" id="bHome" aria-label="タイトル"><span class="i-home"></span></button><h2>かたちを描く</h2><button class="ic sm" id="qbtn" aria-label="かたち"><span class="i-shape"></span></button></div>
     <p id="coach">見本をえらぶか、指で描いてみよう</p>
     <div id="padwrap"><canvas id="pad"></canvas><div id="ghostTxt" style="display:none"></div></div>
     <p id="live"></p>
     <div id="tools"></div>
     <div id="tpl"></div>
-    <div class="row"><button id="bUndo">戻す</button><button id="bClear">消す</button><button class="main" id="bOk">決定</button></div>
+    <div class="row"><button class="sq" id="bUndo" aria-label="戻す"><span class="i-undo"></span></button><button class="sq" id="bClear" aria-label="消す"><span class="i-trash"></span></button><button class="main bi" id="bOk"><span class="i-check"></span>決定</button></div>
   </div>
 
   <div class="scr" id="sRes">
@@ -223,8 +249,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
     <p id="sum"></p>
     <div id="ablbox"><div id="abl"></div></div>
     <pre id="raw"></pre>
-    <button class="main big" id="bGo">のぼる！</button>
-    <button class="link" id="bRedraw">描き直す</button>
+    <div class="row"><button class="sq" id="bRedraw" aria-label="描き直す"><span class="i-pencil"></span></button><button class="main big" id="bGo">のぼる！</button></div>
   </div>
 
   <svg id="tutHand" viewBox="0 0 24 24"><path id="tutHandP" fill="#fff" stroke="#1d2440" stroke-width="1.6" stroke-linejoin="round"/></svg>
@@ -246,13 +271,13 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
       <p id="best"></p>
       <div class="who"><canvas id="overCv" width="96" height="96"></canvas><span><span id="overType"></span><span id="overEff"></span></span></div>
     </div>
-    <div id="rkBox"><div id="rkRow"><input id="rkName" maxlength="8" placeholder="なまえ（かな8文字）" autocomplete="off" enterkeyhint="send"><button class="main" id="rkGo">ランキングに登録</button></div><p id="rkMsg"></p></div>
-    <button class="main big" id="bRetry">リスタート</button>
-    <button class="sec" id="bAgain">書き直す</button>
+    <div id="rkBox"><div id="rkRow"><input id="rkName" maxlength="8" placeholder="なまえ（かな）" autocomplete="off" enterkeyhint="send"><button class="main bi" id="rkGo"></button></div><p id="rkMsg"></p></div>
+    <button class="main big bi" id="bRetry"><span class="i-retry"></span>リスタート</button>
     <div class="icons">
-      <button class="ic" id="bSave"><span class="i-save"></span><small>保存</small></button>
-      <button class="ic" id="bShare"><span class="i-share"></span><small>シェア</small></button>
-      <button class="ic" id="bTitle"><span class="i-home"></span><small>タイトル</small></button>
+      <button class="ic" id="bAgain" aria-label="描き直す"><span class="i-pencil"></span></button>
+      <button class="ic" id="bSave" aria-label="保存"><span class="i-save"></span></button>
+      <button class="ic" id="bShare" aria-label="シェア"><span class="i-share"></span></button>
+      <button class="ic" id="bTitle" aria-label="タイトル"><span class="i-home"></span></button>
     </div>
   </div>
 
@@ -260,21 +285,21 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
     <h3>かたち と 効果</h3>
     <p class="sub2">描いたかたちから 2つ えらばれる</p>
     <div id="chart"></div>
-    <p class="cls">さわって とじる</p>
+    <button class="ic sm ovx" aria-label="とじる"><span class="i-x"></span></button>
   </div>
   <div class="ov" id="recs">
     <h3 id="recH">じぶんの記録</h3>
     <div id="recCtl"><div class="tabs" id="recTabs"><button data-v="rk" class="on">みんな</button><button data-v="me">じぶん</button></div></div>
     <div id="rkCtl" style="display:none;flex-direction:column;align-items:center;gap:6px"><div class="tabs" id="rkModes"><button data-v="time30" class="on">30秒</button><button data-v="ta1000">1000m</button></div><div class="tabs" id="rkPers"><button data-v="day" class="on">今日</button><button data-v="all">全期間</button></div></div>
     <div id="recList"></div>
-    <p class="cls">さわって とじる</p>
+    <button class="ic sm ovx" aria-label="とじる"><span class="i-x"></span></button>
   </div>
   <div class="ov" id="effHelp">
     <h3 id="ehName"></h3>
     <div class="tabs" id="ehTabs"></div>
     <canvas id="ehCv" width="600" height="420"></canvas>
     <div id="ehTxt"></div>
-    <p class="cls">さわって とじる</p>
+    <button class="ic sm ovx" aria-label="とじる"><span class="i-x"></span></button>
   </div>
   <div class="ov" id="zukan">
     <h3>図鑑</h3>
@@ -282,14 +307,14 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
     <p class="zkh2">特殊効果</p>
     <div class="zg z4" id="zukEff"></div>
     <p class="zkrank" id="zukRank"></p>
-    <p class="cls">さわって とじる</p>
+    <button class="ic sm ovx" aria-label="とじる"><span class="i-x"></span></button>
   </div>
 </div>
 
 <script>
 /*SIM-START*/
 // ===== ゲームの計算部分（DOM を使わない。Node の試し遊びはここだけを読み込む）=====
-const VERSION = '0.14.2';
+const VERSION = '0.15.0';
 
 // ===== 調整用パラメータ =====
 const P = {
@@ -300,9 +325,9 @@ const P = {
   // 個体差（表示しない。特殊効果とは別の物差し）：
   //   大きさ（描いた絵の大きさ size0〜size1 → 体 ±size）… 大きいほど足場に届きやすいが、トゲ・敵・柱に当たりやすい
   //   テンポ（重さ → 時間の速さ ±tempo。高さと距離は同じ）… 重いほどキビキビ登れるが、空中の時間が短く狙う余裕が減る
-  indiv: { size: 0.1, size0: 0.35, size1: 0.9, tempo: 0.1 },
+  indiv: { tempo: 0.1 },   // 個体差：テンポ ±10%（大きさは描いた大きさそのもの）
   // 体の大きさ
-  bodySize: 44, bodyGrow: 0, bodyMin: 16,
+  bodyScale: 0.21, bodyMin: 16,   // キャラの大きさ＝描いた大きさ × bodyScale（見本くらいの 210 で 44。小さすぎるときだけ bodyMin）
   // 基本の動き
   gravity: 3000, maxFall: 1700, jumpVy: 1160, jumpVx: 250, groundFriction: 22,
   // コンボ（ポンポンポーン）
@@ -654,11 +679,10 @@ function pickEffects(s) {
 function derive(s) {
   const A = P.ab, E = s.effects || pickEffects(s);
   const k = id => E.some(e => e.id === id) ? 1 : 0;
-  const I = P.indiv, ext = Math.max(s.bbox.w, s.bbox.h) / P.boxSize;
-  const sv = clamp01((ext - I.size0) / (I.size1 - I.size0)) * 2 - 1, tk = 1 + I.tempo * (s.weight * 2 - 1);   // 個体差：大きさ -1〜1、テンポの倍率
+  const I = P.indiv, tk = 1 + I.tempo * (s.weight * 2 - 1);   // 個体差：テンポの倍率
   const round = k('bounce'), hook = k('swing'), flat = k('kick'), spike = k('stab');
   const high = k('high'), glide = k('glide'), air = k('air'), big = k('big');
-  const size = P.bodySize * (1 + I.size * sv);
+  const size = Math.max(P.bodyMin, Math.max(s.bbox.w, s.bbox.h) * P.bodyScale);   // 描いた大きさのまま
   const sc = size / Math.max(s.bbox.w, s.bbox.h);
   const hold = clamp01(flat * A.flatHold + spike * A.spikeHold);
   const stab = spike > 0;
@@ -1288,9 +1312,19 @@ const ICON = {
   x: SV('<path d="M6 6l12 12M18 6L6 18"/>'),
   save: SV('<path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 19h14"/>'),
   share: SV('<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/>'),
+  timer: SV('<circle cx="12" cy="13.5" r="7.5"/><path d="M12 10v3.5l2.5 2M9.5 3h5M12 3v2.5"/>'),
+  flag: SV('<path d="M6 21V4"/><path d="M6 4h12l-2.5 4L18 12H6"/>'),
+  hand: SV('<path d="M9 13V5.5a1.5 1.5 0 0 1 3 0V11m0-1a1.5 1.5 0 0 1 3 0v1.5m0-.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-.5a5 5 0 0 1-4.2-2.3L5 15.5a1.5 1.5 0 0 1 2.4-1.8L9 15.5"/>'),
+  undo: SV('<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-4"/>'),
+  trash: SV('<path d="M4 7h16M9.5 7V4h5v3M6 7l1 13h10l1-13M10 11v5M14 11v5"/>'),
+  check: SV('<path d="M5 12.5l4.5 4.5L19 7"/>'),
+  pencil: SV('<path d="M4 20l1.2-4.8L16 4.4l3.6 3.6L8.8 18.8z"/><path d="M13.5 7l3.5 3.5"/>'),
+  retry: SV('<path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/>'),
+  play: SV('<path d="M8 5.5l10 6.5-10 6.5z" fill="currentColor"/>'),
+  eye: SV('<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'),
+  bulb: SV('<path d="M9.5 18h5M10.5 21h3"/><path d="M12 3a6 6 0 0 0-4 10.5c.8.8 1.2 1.6 1.2 2.5h5.6c0-.9.4-1.7 1.2-2.5A6 6 0 0 0 12 3z"/>'),
 };
-for (const [k, v] of Object.entries({ 'i-trophy': 'trophy', 'i-book': 'book', 'i-shape': 'shape', 'i-home': 'home', 'i-x': 'x', 'i-save': 'save', 'i-share': 'share' }))
-  document.querySelectorAll('.' + k).forEach(e => e.innerHTML = ICON[v]);
+document.querySelectorAll('span[class^="i-"]').forEach(e => { const k = e.className.slice(2); if (ICON[k]) e.innerHTML = ICON[k]; });   // <span class="i-なまえ"> にアイコンを入れる
 function sndLabel() { document.querySelectorAll('.i-snd').forEach(e => e.innerHTML = AU.on ? ICON.sndOn : ICON.sndOff); }
 sndLabel();
 function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; app.append(d); setTimeout(() => d.remove(), 1600); }
@@ -1308,7 +1342,7 @@ function show(m) {
 function howto(on) { $('howto').classList.toggle('on', on); }
 for (const id of ['howto', 'recs', 'zukan', 'effHelp']) {
   $(id).addEventListener('pointerdown', e => e.stopPropagation());   // 遊び中に開いたときも、引っ張りの操作にしない
-  $(id).addEventListener('click', e => { if (e.target.closest('button, .tabs, #chart > div, #recCtl, #rkCtl')) return; $(id).classList.remove('on'); });
+  $(id).addEventListener('click', e => { if (e.target.closest('button:not(.ovx), .tabs, #chart > div, #recCtl, #rkCtl')) return; $(id).classList.remove('on'); });
 }
 $('qbtn').addEventListener('click', () => { chartUI(); howto(true); });
 $('bHelp').addEventListener('click', () => { chartUI(); howto(true); });
@@ -1426,7 +1460,7 @@ const copyStrokes = list => list.map(s => Object.assign(s.map(p => ({ x: p.x, y:
 for (const t of TEMPLATES) {
   const b = document.createElement('button'), c = document.createElement('canvas');
   c.width = c.height = 80; const g = c.getContext('2d'); g.setTransform(80 / P.boxSize, 0, 0, 80 / P.boxSize, 0, 0); strokePath(g, t.strokes);
-  b.append(c, t.name); $('tpl').append(b);
+  b.append(c); b.setAttribute('aria-label', t.name); $('tpl').append(b);   // 見本は絵だけ
   b.addEventListener('click', () => { auInit(); SFX.ok(); ghostOff(); strokes = copyStrokes(t.strokes); undoStack.length = 0; undoStack.push(strokes.length); padDraw(); });
 }
 
@@ -1447,7 +1481,7 @@ const CHART = [
   ['high', 'たてなが', () => [[{ x: 120, y: 20 }, { x: 180, y: 20 }, { x: 180, y: 280 }, { x: 120, y: 280 }, { x: 120, y: 20 }]]],
   ['glide', 'よこなが', () => [[{ x: 20, y: 120 }, { x: 280, y: 120 }, { x: 280, y: 180 }, { x: 20, y: 180 }, { x: 20, y: 120 }]]],
   ['air', 'ほそく・かるく', () => [[{ x: 60, y: 240 }, { x: 150, y: 60 }, { x: 240, y: 240 }]]],
-  ['big', 'ぬりつぶす・ふとく', () => { const o = []; for (let y = 70; y <= 230; y += 12) o.push(Object.assign([{ x: 70, y }, { x: 230, y }], { w: 16 })); return o; }],
+  ['big', 'ぬる・ふとく', () => { const o = []; for (let y = 70; y <= 230; y += 12) o.push(Object.assign([{ x: 70, y }, { x: 230, y }], { w: 16 })); return o; }],
 ];
 function climbType(st) {
   return { name: shapeName(st), effLine: '特殊効果 ' + st.effects.map(e => '「' + e.name + '」').join('×') };
@@ -1526,9 +1560,9 @@ $('bOk').addEventListener('click', () => {
   st.effects = pickEffects(st);
   if (tutI >= 0) tutForce(st);
   // 選ばれた特殊効果だけを★で表示（無いものは欄を出さない）
-  $('abl').innerHTML = st.effects.map(e => `<div class="ef"><b>${e.name}</b><button class="ehb" data-id="${e.id}">▶ くわしく</button><small>${EFFECT_INFO[e.id]}</small></div>`).join('');
+  $('abl').innerHTML = st.effects.map(e => `<div class="ef"><b>${e.name}</b><button class="ehb" data-id="${e.id}" aria-label="くわしく">${ICON.play}</button><small>${EFFECT_INFO[e.id]}</small></div>`).join('');
   const ty = climbType(st);
-  $('sum').textContent = ty.name; stats.type = ty.name; stats.effLine = ty.effLine; drawThumb($('resCv'), body, st.bbox);
+  $('sum').textContent = ty.name; stats.type = ty.name; stats.effLine = ty.effLine; drawReal($('resCv'), body, st.bbox);
   $('raw').textContent = DEBUG ? Object.entries(st.raw).map(([k, v]) => k + ' ' + (+v).toFixed(3)).join('\n') +
     '\n' + ['hook', 'flat', 'round', 'spike', 'tall', 'weight'].map(k => k + ' ' + st[k].toFixed(2)).join('\n') : '';
   show('res'); if (tutI >= 0) tutFocus('bGo');
@@ -1849,6 +1883,10 @@ const rankName = m => RANKS[rankIndex(m)][1];
 function thumbURL(B, bbox, size = 96) {
   const c = document.createElement('canvas'); c.width = c.height = size; drawThumb(c, B, bbox); return c.toDataURL('image/png');
 }
+function drawReal(c, B, bbox) {   // 描いた枠と同じ縮尺で、描いた位置の大きさのまま
+  const g = c.getContext('2d'), k = c.width / P.boxSize; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height);
+  g.translate(c.width / 2, c.height / 2 + bbox.h * k / 2); drawBody(g, newDeform(), bbox.w * k, bbox.h * k, 1, false, 0, B); g.setTransform(1, 0, 0, 1, 0, 0);
+}
 function drawThumb(c, B, bbox) {
   const g = c.getContext('2d'), k = Math.min(c.width, c.height) * 0.78 / Math.max(bbox.w, bbox.h);
   g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height);
@@ -1919,8 +1957,19 @@ function drawDragHint(pl) {
 const TA_RANKS = [[30, 'ライトニング'], [40, 'ロケット'], [50, 'スプリンター'], [70, 'ランナー'], [Infinity, 'ゴールイン']];
 const taRank = t => TA_RANKS.find(([s]) => t <= s)[1];
 const MODE_NAME = { time30: '30秒アタック', ta1000: '1000mタイムアタック', normal: 'エンドレス', tutorial: 'エンドレス' };
+// ----- 遊んだ回数の集計（送るのは、モード・終わったわけ・高さ・秒・形の名前・特殊効果・見本か自作か・描いた大きさだけ。描いた絵は送らない）-----
+const ONLINE = /^https?:$/.test(location.protocol);
+function playLog(why) {   // 1回の遊びが終わったとき（チュートリアルの各段・途中でやめた回も）
+  if (!ONLINE || !G || !stats) return;
+  const a = new Uint8Array(8); crypto.getRandomValues(a); const e = [...a].map(x => x.toString(16).padStart(2, '0')).join('');   // この回の番号（送り直しで二重に数えない）
+  const f = store.get('played', false) ? 0 : 1; store.set('played', true);   // その端末で初めて遊んだ回
+  const ef = stats.effects.map(x => x.id), key = JSON.stringify(packStrokes(strokes)), tpl = TEMPLATES.some(t => JSON.stringify(packStrokes(t.strokes)) === key);
+  const l = { mode: G.mode === 'endless' ? 'normal' : G.mode, why, m: Math.floor(-G.bestY / P.unitPerM), t: +G.t.toFixed(2), clear: !!G.clear, n: stats.type, e1: ef[0], e2: ef[1],
+    src: tpl ? 'tpl' : 'own', ext: Math.round(Math.max(stats.bbox.w, stats.bbox.h)), stage: G.mode === 'tut' ? tutI : undefined };
+  try { fetch('/api/play', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ e, f, v: VERSION, l }), keepalive: true }).catch(() => { }); } catch (err) { }
+}
 function endGame() {
-  aim = null;
+  aim = null; playLog(rs.why || 'quit');
   if (G.mode === 'tut') { if (G.clear && tut) { tutGoal(); return; } tut = null; tutI = -1; tutLock(false); $('tut').classList.remove('on'); $('bEffH').style.display = 'none'; show('title'); return; }   // チュートリアルは記録に残さない
   if (tut) { $('tut').classList.remove('on'); $('tutZones').classList.remove('on'); tut = null; }
   const mode = G.mode === 'endless' ? 'normal' : G.mode, m = Math.floor(-G.bestY / P.unitPerM), t = +G.t.toFixed(2), clear = !!G.clear;
@@ -1967,27 +2016,33 @@ function devId() {   // 端末番号（1人1件のため。ランダムな数字
 }
 const rkEntry = r => r.mode === 'time30' && r.m >= 1 ? r.m : r.mode === 'ta1000' && r.clear ? r.t : null;   // 登録できる記録
 function rkScore(m, s) { return m === 'ta1000' ? s.toFixed(2) + '秒' : s + 'm'; }
-function rkOverUI() {   // 終わりの画面の登録欄
-  const r = lastRun, ok = r && rkEntry(r) !== null;
-  $('rkBox').classList.toggle('on', ok);
-  if (!ok) return;
-  $('rkName').value = store.get('rk_name', ''); $('rkGo').disabled = false; $('rkGo').textContent = 'ランキングに登録'; $('rkMsg').textContent = '';
+const rkBest = m => store.get('recs_' + m, []).find(r => rkEntry(r) !== null) || null;   // そのモードの自己ベスト（記録は良い順に並んでいる）
+function rkBtn(done) { $('rkGo').disabled = done; $('rkGo').innerHTML = ICON.trophy + (done ? '登録ずみ' : '登録'); }
+function rkOverUI() {   // 終わりの画面の登録欄：自己ベストがあれば出す（もう登録した自己ベストなら「登録ずみ」）
+  const m = lastRun && lastRun.mode, r = m && rkBest(m);
+  $('rkBox').classList.toggle('on', !!r);
+  if (!r) return;
+  const s = rkEntry(r), done = store.get('rk_sent', {})[m] === s;
+  $('rkName').value = store.get('rk_name', ''); rkBtn(done);
+  $('rkMsg').innerHTML = (done ? 'じぶんのさいこう <b></b> は 登録ずみ' : 'じぶんのさいこう <b></b> を登録');
+  $('rkMsg').querySelector('b').textContent = rkScore(m, s);
 }
 async function rkSubmit() {
-  const r = lastRun; if (!r || rk.busy) return;
+  const m = lastRun && lastRun.mode, r = m && rkBest(m); if (!r || rk.busy) return;
   const u = $('rkName').value.trim();
   if (u && !RK_NAME.test(u)) { $('rkMsg').textContent = 'なまえは ひらがな・カタカナ 8文字まで'; return; }
-  store.set('rk_name', u); rk.busy = true; $('rkGo').disabled = true; $('rkMsg').textContent = '送っています…';
+  const sc = rkEntry(r); store.set('rk_name', u); rk.busy = true; $('rkGo').disabled = true; $('rkMsg').textContent = '送っています…';
   try {
     const res = await fetch('/api/rank', { method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ m: r.mode, s: rkEntry(r), u, n: r.type, e: r.eff, d: devId() }) });
+      body: JSON.stringify({ m, s: sc, u, n: r.type, e: r.eff, d: devId(), at: r.date }) });   // at：自己ベストを出した時刻（今日の一覧に入れるかどうか）
     const j = await res.json();
     if (!res.ok) throw new Error(j.error || res.status);
     rk.data = j;
     if (j.id) { const ids = store.get('rk_ids', []); ids.unshift(j.id); store.set('rk_ids', ids.slice(0, 50)); }
+    const sent = store.get('rk_sent', {}); sent[m] = sc; store.set('rk_sent', sent);   // この自己ベストは送った（次に更新するまで「登録ずみ」）
     const pos = [j.dpos ? `今日 <b>${j.dpos}位</b>` : '', j.pos ? `全期間 <b>${j.pos}位</b>` : ''].filter(Boolean).join('　');
     $('rkMsg').innerHTML = j.id ? '登録しました！　' + pos : pos ? 'じぶんの いちばんの記録は　' + pos : '100位に 入りませんでした';
-    $('rkGo').textContent = '登録ずみ';
+    rkBtn(true);
   } catch (e) {
     $('rkMsg').textContent = String(e.message) === 'invalid' ? 'なまえを 変えてみてね' : String(e.message) === 'busy' ? '少し待ってから もう一度' : 'つながりませんでした';
     $('rkGo').disabled = false;
@@ -2131,8 +2186,8 @@ function loadMine() {
   for (const m of store.get('mine', [])) { try { const list = unpackStrokes(m), T = tbOf(list); if (T.st.ok !== false && T.st.bbox) tbMine.push(T); } catch (e) { } }
 }
 function drawTitle(now) {
-  const c = $('titleCv'), d = Math.min(2, window.devicePixelRatio || 1);
-  if (c.width !== 160 * d) { c.width = 160 * d; c.height = 170 * d; }
+  const c = $('titleCv'), d = Math.min(2, window.devicePixelRatio || 1), ch = c.clientHeight || 170;
+  if (c.width !== 160 * d || c.height !== Math.round(ch * d)) { c.width = 160 * d; c.height = Math.round(ch * d); }
   const g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height);
   const t = now / 1000, cyc = Math.floor(t / 2.4), pool = TB.concat(tbMine), ph = (t % 0.8) / 0.8;
   if (cyc !== tbCycle) { tbCycle = cyc; const n = pool.length; let j = Math.floor(Math.random() * n); if (n > 1 && j === tbCur) j = (j + 1) % n; tbCur = j; }   // 2.4秒ごとに、前と違うキャラをランダムに
@@ -2140,7 +2195,7 @@ function drawTitle(now) {
   if (ph < (T.ph ?? 1)) { D.sq.p = -0.4; D.wob.v += 4; D.sq.v = 0; } T.ph = ph;
   if (ph > 0.12 && !T.up) { D.sq.v += 6; T.up = true; } if (ph < 0.12) T.up = false;
   spring(D.sq, 0, 1 / 60); spring(D.wob, 0, 1 / 60, 200, 5); D.sq.p = clamp(D.sq.p, -0.4, 0.3);
-  const b = T.st.bbox, k = 70 * d / Math.max(b.w, b.h), hop = Math.max(0, Math.sin(Math.max(0, ph - 0.12) / 0.88 * Math.PI)) * 40 * d;
+  const b = T.st.bbox, sk = Math.min(1, ch / 170), k = d * sk / 3, hop = Math.max(0, Math.sin(Math.max(0, ph - 0.12) / 0.88 * Math.PI)) * 40 * d * sk;   // 描いた大きさのまま（縮尺 1/3）
   g.translate(c.width / 2, c.height - 8 * d - hop); drawBody(g, D, b.w * k, b.h * k, 1, false, t, T.B);
 }
 
@@ -2163,7 +2218,7 @@ function chartUI() {
     const d = document.createElement('div'), c = document.createElement('canvas'); c.width = c.height = 80;
     const g = c.getContext('2d'); g.setTransform(80 / P.boxSize * 0.8, 0, 0, 80 / P.boxSize * 0.8, 8, 8); strokePath(g, mk());
     const name = EFFECTS.find(e => e.id === id).name, t = document.createElement('span');
-    t.innerHTML = `${name}<small>${how}　▶ くわしく</small>`; d.append(c, t); box.append(d);
+    t.innerHTML = `${name}<small>${how}</small>`; const go = document.createElement('i'); go.className = 'go'; go.innerHTML = ICON.play; d.append(c, t, go); box.append(d);
     d.addEventListener('pointerdown', e => e.stopPropagation()); d.addEventListener('click', () => { $('howto').classList.remove('on'); effHelp([id], mk()); });
   }
 }
@@ -2190,7 +2245,7 @@ function ehShow(i) {
   eh.i = i; eh.t0 = performance.now(); const id = eh.ids[i], H = EFFECT_HELP[id];
   $('ehName').textContent = EFFECTS.find(e => e.id === id).name;
   for (const b of $('ehTabs').children) b.classList.toggle('on', +b.dataset.i === i);
-  $('ehTxt').innerHTML = ''; [['どうなる', H[0]], ['操作', H[1]], ['コツ', H[2]]].forEach(([k, v]) => { const p = document.createElement('p'); p.innerHTML = `<b>${k}</b>`; p.append(v); $('ehTxt').append(p); });
+  $('ehTxt').innerHTML = ''; [['eye', 'どうなる', H[0]], ['hand', '操作', H[1]], ['bulb', 'コツ', H[2]]].forEach(([ic, k, v]) => { const p = document.createElement('p'), sp = document.createElement('span'); p.innerHTML = `<b aria-label="${k}">${ICON[ic]}</b>`; sp.textContent = v; p.append(sp); $('ehTxt').append(p); });
 }
 $('ehTabs').addEventListener('pointerdown', e => e.stopPropagation());
 $('ehTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) ehShow(+b.dataset.i); });
