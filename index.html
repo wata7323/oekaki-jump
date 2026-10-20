@@ -38,9 +38,9 @@ svg{display:block}
 .col{display:flex;flex-direction:column;align-items:center;gap:12px}
 /* アイコンボタン */
 .icons{display:flex;gap:12px}
-.ic{width:58px;height:58px;border-radius:18px;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;letter-spacing:0}
+.ic{width:58px;height:58px;border-radius:0;background:none;box-shadow:none;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;letter-spacing:0}
 .ic small{font-size:10px;font-weight:800;color:var(--sub)}
-.ic.sm{width:42px;height:42px;border-radius:14px}
+.ic.sm{width:42px;height:42px}
 /* 上の帯 */
 .bar{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:center}
 .bar h2{margin:0;font-size:18px;font-weight:900;color:var(--ink);letter-spacing:.08em}
@@ -55,15 +55,16 @@ svg{display:block}
 .tbest{margin:0;font-size:14px;font-weight:900;color:var(--sub);min-height:1em}
 .ver{position:absolute;right:12px;bottom:10px;font-size:11px;color:var(--sub);font-weight:700}
 /* 描く */
-#pad{width:min(calc(100vw - 32px),330px,44dvh);aspect-ratio:1;background:var(--card);border-radius:22px;box-shadow:0 6px 0 rgba(29,36,64,.16);touch-action:none;display:block}
+#pad{width:min(calc(100vw - 32px),330px,44dvh);aspect-ratio:1;background:var(--card);box-shadow:6px 6px 0 rgba(29,36,64,.16);touch-action:none;display:block}
 #padwrap{position:relative}
 #ghostTxt{position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:14px;font-weight:800;color:rgba(29,36,64,.4);pointer-events:none}
-#coach{display:none;margin:-4px 0 0;font-size:13px;font-weight:900;color:#fff;background:var(--ink);padding:7px 14px;border-radius:999px}
+#coach{display:none;margin:-4px 0 0;font-size:14px;font-weight:900;color:var(--ink);border-left:4px solid var(--acc);padding:2px 10px}
 #coach.on{display:block}
-#tools{display:flex;gap:8px;justify-content:center}
-#tools button{padding:0;width:50px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:14px;box-shadow:0 3px 0 rgba(29,36,64,.2)}
-#tpl{width:min(calc(100vw - 32px),330px,44dvh);display:flex;gap:8px}
-#tpl button{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 4px;font-size:13px;border-radius:14px;box-shadow:0 3px 0 rgba(29,36,64,.2)}
+#tools{display:flex;gap:2px;justify-content:center}
+#tools button{padding:0;width:50px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:0;background:rgba(255,255,255,.7);box-shadow:none}
+#tools button.on{background:var(--ink)}
+#tpl{width:min(calc(100vw - 32px),330px,44dvh);display:flex;gap:2px}
+#tpl button{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 4px;font-size:13px;border-radius:0;background:rgba(255,255,255,.7);box-shadow:none}
 #tpl canvas{width:30px;height:30px}
 #tplLbl{font-size:11px;font-weight:800;color:var(--sub);margin:-8px 0 -6px}
 /* 結果（能力） */
@@ -74,7 +75,15 @@ svg{display:block}
 #live b{color:var(--ink)}
 #effLine{margin:-10px 0 0;font-size:14px;font-weight:900;color:var(--ink)}
 #overEff{display:block;font-size:11px;color:var(--sub);font-weight:800}
-#ablbox{background:#fff;padding:16px 20px;border-radius:22px;box-shadow:0 2px 0 rgba(29,36,64,.1)}
+/* 特殊効果の説明：アニメーションと、どうなる・操作・コツ */
+.ef .ehb{grid-column:2;grid-row:1;padding:5px 11px;font-size:12px;background:var(--ink);color:#fff;box-shadow:none}
+#effHelp{justify-content:center;gap:10px}
+#ehCv{width:min(300px,86vw);aspect-ratio:300/210;background:#cdeeff;display:block}
+#ehTxt{width:min(300px,86vw);display:grid}
+#ehTxt p{margin:0;font-size:14px;font-weight:800;line-height:1.5;padding:8px 2px;border-top:1px solid rgba(255,255,255,.18)}
+#ehTxt p b{display:inline-block;min-width:4em;color:var(--acc2);font-size:12px}
+#bEffH{pointer-events:auto;font-size:18px;font-weight:900}
+#ablbox{padding:12px 4px;border-top:3px solid var(--ink);border-bottom:3px solid var(--ink)}
 #abl{display:flex;flex-direction:column;gap:12px;min-width:236px}
 .ef{display:grid;grid-template-columns:1fr auto;align-items:center;gap:0 16px}
 .ef b{font-size:17px}
@@ -91,14 +100,14 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 #timer{position:absolute;left:16px;top:52px;font-size:22px;font-weight:900;color:#fff;text-shadow:0 2px 0 var(--ink);font-variant-numeric:tabular-nums}
 #timer.hurry{color:var(--acc2)}
 #cmb{position:absolute;left:16px;top:84px;display:flex;gap:6px}
-#cmb i{width:14px;height:14px;border:2.5px solid #fff;border-radius:50%;display:block;box-shadow:0 2px 0 var(--ink)}
+#cmb i{width:14px;height:14px;border:2.5px solid #fff;display:block;box-shadow:0 2px 0 var(--ink)}
 #cmb i.f{background:var(--acc2)}
 #cmb i.big{background:var(--acc);border-color:var(--acc)}
 #hbtn{position:absolute;right:10px;top:10px;display:flex;gap:6px;pointer-events:auto}
-#hbtn .ic{background:rgba(255,255,255,.4);box-shadow:none}
-#tut{position:absolute;left:0;right:0;bottom:12%;display:none;flex-direction:column;align-items:center;pointer-events:none;z-index:5}
+#hbtn .ic{background:rgba(255,255,255,.45)}
+#tut{position:absolute;left:0;right:0;bottom:12%;align-items:stretch!important;display:none;flex-direction:column;align-items:center;pointer-events:none;z-index:5}
 #tut.on{display:flex}
-#tut p{margin:0;background:rgba(29,36,64,.86);color:#fff;font-weight:900;font-size:18px;padding:11px 20px;border-radius:999px;animation:pin .25s ease-out}
+#tut p{margin:0;background:rgba(29,36,64,.86);color:#fff;font-weight:900;font-size:17px;line-height:1.45;padding:11px 20px;text-align:center;white-space:pre-line;animation:pin .25s ease-out}
 @keyframes pin{from{transform:scale(.8);opacity:0}}
 #tutZones{position:absolute;inset:0;display:none;pointer-events:none;z-index:4}
 #tutZones.on{display:flex}
@@ -116,13 +125,13 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 @keyframes th{0%,100%{transform:rotate(-20deg) translate(0,0)}50%{transform:rotate(-20deg) translate(0,-7px) scale(.94)}}
 @keyframes tz{0%,100%{opacity:.35}50%{opacity:1}}
 /* 終わり */
-.card{position:relative;background:#fff;border-radius:24px;padding:16px 24px 14px;text-align:center;box-shadow:0 2px 0 rgba(29,36,64,.1);min-width:250px}
+.card{position:relative;padding:12px 8px 12px;text-align:center;min-width:250px;border-top:3px solid var(--ink);border-bottom:3px solid var(--ink)}
 #why{margin:0;font-size:14px;font-weight:900;color:var(--acc);min-height:1.2em}
 #big{font-size:64px;font-weight:900;margin:0;line-height:1.05;font-variant-numeric:tabular-nums}
 #big small{font-size:22px;margin-left:2px}
 #best{margin:0;font-size:13px;font-weight:800;color:var(--sub)}
 #rank{margin:2px 0 4px;font-size:17px;font-weight:900;color:var(--ink);letter-spacing:.06em}
-#newBest{display:none;margin:0 auto 4px;width:max-content;background:var(--acc2);color:var(--ink);font-weight:900;font-size:12px;padding:3px 10px;border-radius:999px}
+#newBest{display:none;margin:0 auto 4px;width:max-content;background:var(--acc2);color:var(--ink);font-weight:900;font-size:12px;padding:3px 10px}
 #newBest.on{display:block}
 .who{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px}
 #overCv{width:48px;height:48px}
@@ -133,13 +142,13 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 .ov h3{margin:6px 0 0;font-size:20px;font-weight:900;letter-spacing:.08em}
 .ov .cls{opacity:.7;font-size:13px;margin:4px 0 0;font-weight:700}
 .ov .sub2{margin:-6px 0 0;font-size:13px;opacity:.8;font-weight:700}
-#chart,#recList,#zukList{display:grid;gap:8px;width:100%;max-width:340px}
+#chart,#recList,#zukList{display:grid;gap:0 12px;width:100%;max-width:340px}
 #chart{grid-template-columns:1fr 1fr}
 #recList{grid-template-columns:1fr}
 .rec span{min-width:0}
 #recList .zkh{margin:8px 0 0;grid-column:1/-1}
-#chart div,.rec,.zk{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);padding:7px 9px;border-radius:14px;font-size:13px;font-weight:800}
-#chart canvas,.rec canvas,.zk canvas{width:40px;height:40px;background:#fff;border-radius:10px;flex:none}
+#chart div,.rec,.zk{display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,.15);font-size:13px;font-weight:800}
+#chart canvas,.rec canvas,.zk canvas{width:40px;height:40px;background:#fff;flex:none}
 #chart small,.rec small,.zk small{display:block;font-size:11px;opacity:.7;font-weight:700}
 .rec b{width:22px;text-align:center;font-size:15px;color:var(--acc2)}
 .rec span,.zk span{flex:1}
@@ -149,23 +158,23 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 #rkBox{display:none;flex-direction:column;align-items:center;gap:6px;width:min(300px,86vw)}
 #rkBox.on{display:flex}
 #rkRow{display:flex;gap:8px;width:100%}
-#rkName{flex:1;min-width:0;font-family:inherit;font-size:16px;font-weight:800;color:var(--ink);border:2px solid rgba(29,36,64,.15);border-radius:999px;padding:9px 14px;background:#fff;-webkit-user-select:text;user-select:text;outline:none}
+#rkName{flex:1;min-width:0;font-family:inherit;font-size:16px;font-weight:800;color:var(--ink);border:none;border-bottom:3px solid var(--ink);border-radius:0;padding:9px 10px;background:rgba(255,255,255,.75);-webkit-user-select:text;user-select:text;outline:none}
 #rkName:focus{border-color:var(--acc)}
 #rkGo{padding:9px 16px;font-size:14px;white-space:nowrap}
 #rkMsg{margin:0;font-size:13px;font-weight:800;color:var(--sub);min-height:1em;text-align:center}
 #rkMsg b{color:var(--acc)}
-.tabs{display:flex;gap:6px;background:rgba(255,255,255,.1);padding:4px;border-radius:999px}
-.tabs button{padding:7px 14px;font-size:13px;background:none;color:#fff;box-shadow:none}
-.tabs button.on{background:#fff;color:var(--ink)}
-.rec.me{outline:2px solid var(--acc2)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid rgba(255,255,255,.2)}
+.tabs button{padding:7px 14px;font-size:13px;background:none;color:rgba(255,255,255,.6);box-shadow:none;border-radius:0}
+.tabs button.on{background:none;color:#fff;box-shadow:inset 0 -3px 0 var(--acc2)}
+.rec.me{background:rgba(255,197,49,.16)}
 .rec .nm{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* 図鑑：1画面に収まる小さなマス */
 #zukan{justify-content:center;gap:8px}
 .zkh2{margin:4px 0 -2px;font-size:12px;font-weight:900;opacity:.75;width:100%;max-width:340px}
 .zg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;width:100%;max-width:340px}
 .zg.z4{grid-template-columns:repeat(4,1fr)}
-.zt{display:flex;flex-direction:column;align-items:center;gap:2px;background:rgba(255,255,255,.08);border-radius:12px;padding:6px 2px 5px}
-.zt canvas{width:min(40px,10vw);height:min(40px,10vw);background:#fff;border-radius:9px}
+.zt{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 5px}
+.zt canvas{width:min(40px,10vw);height:min(40px,10vw);background:#fff}
 .zt span{font-size:10px;font-weight:800;line-height:1.2;text-align:center;white-space:nowrap}
 .zt.no canvas{background:rgba(255,255,255,.15)}
 .zt.no span{opacity:.45}
@@ -174,7 +183,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 .zkh{grid-column:1/3;margin:6px 0 -2px;font-size:13px;font-weight:900;opacity:.8}
 .zk canvas:empty{}
 .empty{opacity:.7;font-size:14px;font-weight:700;margin:20px 0}
-.toast{position:absolute;left:50%;bottom:16%;transform:translateX(-50%);background:var(--ink);color:#fff;font-weight:900;font-size:14px;padding:9px 16px;border-radius:999px;z-index:20;pointer-events:none;animation:pin .2s ease-out}
+.toast{position:absolute;left:50%;bottom:16%;transform:translateX(-50%);background:var(--ink);color:#fff;font-weight:900;font-size:14px;padding:9px 16px;z-index:20;pointer-events:none;animation:pin .2s ease-out}
 </style>
 </head>
 <body>
@@ -225,7 +234,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
     <div id="hgt">0<small>m</small></div>
     <div id="timer"></div>
     <div id="cmb"><i></i><i></i><i></i></div>
-    <div id="hbtn"><button class="ic sm" id="bSnd"><span class="i-snd"></span></button><button class="ic sm" id="bQuit"><span class="i-x"></span></button></div>
+    <div id="hbtn"><button class="ic sm" id="bSnd"><span class="i-snd"></span></button><button class="ic sm" id="bEffH" style="display:none">？</button><button class="ic sm" id="bQuit"><span class="i-x"></span></button></div>
   </div>
 
   <div class="scr" id="sOver">
@@ -260,6 +269,13 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
     <div id="recList"></div>
     <p class="cls">さわって とじる</p>
   </div>
+  <div class="ov" id="effHelp">
+    <h3 id="ehName"></h3>
+    <div class="tabs" id="ehTabs"></div>
+    <canvas id="ehCv" width="600" height="420"></canvas>
+    <div id="ehTxt"></div>
+    <p class="cls">さわって とじる</p>
+  </div>
   <div class="ov" id="zukan">
     <h3>図鑑</h3>
     <p class="sub2" id="zukSum"></p>
@@ -275,7 +291,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 <script>
 /*SIM-START*/
 // ===== ゲームの計算部分（DOM を使わない。Node の試し遊びはここだけを読み込む）=====
-const VERSION = '0.13.0';
+const VERSION = '0.14.0';
 
 // ===== 調整用パラメータ =====
 const P = {
@@ -322,6 +338,7 @@ const P = {
     spikeHold: 1.6, spikeStab: 0.35, spikeEnterVy: 150, spikeHopMul: 0.85, spikeHops: 99,
     // フック：絵のくぼみを足場の端に掛けて振り子。振りの勢いを乗せて飛ぶ
     hookMin: 0.12, hookR0: 14, hookR1: 26, hookJump: 0.15, grabMaxUpV: 300, hookUpV: 200, grabCd: 0.35,
+    hookReach: 1.3, hookSuck: 1.9, hookPull: 900,   // hookReach：つかめる範囲の倍率、hookSuck：吸い寄せが始まる範囲（つかめる範囲の何倍か）、hookPull：吸い寄せの強さ（最大の加速）
     ropeLen0: 30, ropeLen1: 35, swingG: 0.7, swingAmp: 1.0, swingPump: 6, swingCarry: 0.45, hangDamp: 0.3,   // ropeLen：とがった先が伸びてできるロープの長さ（ropeLen0 + ropeLen1×★）
     // ハイジャンプ：高く・横は控えめ　ふわり：落ちるときの重力と最高落下速度を下げる
     highVy: 0.17, highVx: 0.25, glideG: 0.55, glideUpG: 0.42, glideHoldV: 110, glideSteer: 260, glideFall: 0.5, glideAssist: 22, glideMagnet: 0.8,
@@ -1040,6 +1057,7 @@ function stepAir(G, dt) {
     }
   }
   if (pl.st === 'air' && pl.vy > 0) magnet(G, dt);
+  if (pl.st === 'air') hookSuck(G, dt);
   // 縦の移動と着地
   const prevB = pl.y; pl.y += pl.vy * dt;
   if (pl.vy > 0) {
@@ -1118,13 +1136,30 @@ function land(G, s, v, mb = 0) {
   }
 }
 
+// フックの吸い寄せ：角の近くを通るとき、とがった先が角へ少し寄る（近いほど強く。つかめる条件のときだけ）
+function hookSuck(G, dt) {
+  const pl = G.pl, ab = G.ab, A = P.ab;
+  if (ab.hookR <= 0 || pl.grabCd > 0 || pl.vy < -ab.grabUpV) return;
+  const tx = pl.x, ty = pl.y - pl.h, Z = ab.hookR * A.hookReach * A.hookSuck;
+  let best = null, bd = Z;
+  for (const a of G.course.anchors) {
+    if (ty < a.y - Z * 0.6 || ty > a.y + Z) continue;
+    if ((tx - a.x) * a.side < -pl.hw * 0.5) continue;
+    const d = Math.hypot(tx - a.x, ty - a.y);
+    if (d < bd) { bd = d; best = a; }
+  }
+  if (!best || bd < 1) return;
+  const k = A.hookPull * (1 - bd / Z) * dt;
+  pl.vx += (best.x - tx) / bd * k; pl.vy += (best.y - ty) / bd * k * 0.5;
+}
 function tryGrab(G) {
   const pl = G.pl, ab = G.ab, A = P.ab;
   if (ab.hookR <= 0 || pl.grabCd > 0 || pl.vy < -ab.grabUpV) return;
   const tx = pl.x, ty = pl.y - pl.h;
-  let best = null, bd = ab.hookR;
+  const R = ab.hookR * A.hookReach;
+  let best = null, bd = R;
   for (const a of G.course.anchors) {
-    if (ty < a.y - 2 || ty > a.y + ab.hookR) continue;
+    if (ty < a.y - 2 || ty > a.y + R) continue;
     if ((tx - a.x) * a.side < -pl.hw * 0.5) continue;
     const d = Math.hypot(tx - a.x, ty - a.y);
     if (d < bd) { bd = d; best = a; }
@@ -1270,7 +1305,7 @@ function show(m) {
 
 // ----- 遊び方（初回だけ自動）-----
 function howto(on) { $('howto').classList.toggle('on', on); }
-for (const id of ['howto', 'recs', 'zukan']) $(id).addEventListener('pointerdown', e => { e.stopPropagation(); $(id).classList.remove('on'); });
+for (const id of ['howto', 'recs', 'zukan', 'effHelp']) $(id).addEventListener('pointerdown', e => { e.stopPropagation(); $(id).classList.remove('on'); });
 $('qbtn').addEventListener('click', () => { chartUI(); howto(true); });
 $('bHelp').addEventListener('click', () => { chartUI(); howto(true); });
 $('bRec').addEventListener('click', () => { recTab('me'); $('recs').classList.add('on'); });
@@ -1487,7 +1522,7 @@ $('bOk').addEventListener('click', () => {
   st.effects = pickEffects(st);
   if (tutI >= 0) tutForce(st);
   // 選ばれた特殊効果だけを★で表示（無いものは欄を出さない）
-  $('abl').innerHTML = st.effects.map(e => `<div class="ef"><b>${e.name}</b><small>${EFFECT_INFO[e.id]}</small></div>`).join('');
+  $('abl').innerHTML = st.effects.map(e => `<div class="ef"><b>${e.name}</b><button class="ehb" data-id="${e.id}">▶ くわしく</button><small>${EFFECT_INFO[e.id]}</small></div>`).join('');
   const ty = climbType(st);
   $('sum').textContent = ty.name; stats.type = ty.name; stats.effLine = ty.effLine; drawThumb($('resCv'), body, st.bbox);
   $('raw').textContent = DEBUG ? Object.entries(st.raw).map(([k, v]) => k + ' ' + (+v).toFixed(3)).join('\n') +
@@ -1599,7 +1634,7 @@ function handleEvents() {
     else if (e.k === 'stick') { SFX.stick(); D.side = e.side; D.press.p = 1.15; D.press.v = 0; D.wob.v += 3; }
     else if (e.k === 'stab') { SFX.stab(); D.side = e.side || 1; D.quiver = 1; D.press.p = e.ceil ? 0 : 0.4; if (e.ceil) { D.sq.p = 0.3; } }
     else if (e.k === 'hook') { SFX.hook(); D.sq.p = 0.35; D.bend.v -= e.w * 3; }
-    else if (e.k === 'over') { if (e.why === 'goal') SFX.ok(); else SFX.over(); overT = 0.7; }
+    else if (e.k === 'over') { if (e.why === 'goal') SFX.ok(); else SFX.over(); overT = 0.7; if (G.mode === 'tut') $('tut').classList.remove('on'); }
   }
   G.ev.length = 0;
 }
@@ -1831,17 +1866,19 @@ function cloneGame(g0) {
   return { ...g0, course: { ...C, plats: C.plats.slice(), blocks: C.blocks.slice(), anchors: C.anchors.slice(), movers: C.movers.slice(), enemies: C.enemies.slice(), colLast: C.colLast.slice(), rng: () => 0.5 },
     ev: [], buf: null, pl: { ...g0.pl, hang: g0.pl.hang ? { ...g0.pl.hang } : null } };
 }
-const MARKS = { stick: ['ペタッ', 'acc2'], stab: ['ザクッ', 'acc2'], hook: ['ガシッ', 'acc2'], bounce: ['ポヨン', 'acc2'], over: ['キケン', 'danger'] };
+const MARKS = { goal: ['ゴール', 'acc2'], stick: ['ペタッ', 'acc2'], stab: ['ザクッ', 'acc2'], hook: ['ガシッ', 'acc2'], bounce: ['ポヨン', 'acc2'], over: ['キケン', 'danger'] };
 function predict(A) {
-  const g = cloneGame(G), pts = []; launch(g, A.ax, A.ay, A.pw); let mark = null;
+  const g = cloneGame(G), pts = []; launch(g, A.ax, A.ay, A.pw); let mark = null, why = null;
   for (let i = 0; i < 170 && !g.over; i++) {
     step(g, 1 / 120);
     if (i % 3 === 0 && g.pl.st === 'air') pts.push([g.pl.x, g.pl.y - g.pl.h / 2]);
-    const e = g.ev.find(e => (MARKS[e.k] && !(e.k === 'bounce' && e.wall)) || e.k === 'land');
+    const ov = g.ev.find(e => e.k === 'over'); if (ov) why = ov.why;
+    if (why === 'goal') { mark = { k: 'goal', x: g.pl.x, y: g.pl.y }; break; }   // 旗・ゴール線はキケンではない
+    const e = g.ev.find(e => (MARKS[e.k] && e.k !== 'over' && !(e.k === 'bounce' && e.wall)) || e.k === 'land');
     if (e) { mark = { k: e.k, x: g.pl.x, y: g.pl.y - (e.k === 'land' || e.k === 'bounce' ? 0 : g.pl.h / 2) }; break; }
     g.ev.length = 0;
   }
-  if (g.over && !mark) mark = { k: 'over', x: g.pl.x, y: g.pl.y - g.pl.h / 2 };
+  if (g.over && !mark && why !== 'time') mark = { k: 'over', x: g.pl.x, y: g.pl.y - g.pl.h / 2 };   // 時間切れはキケンではない
   courseUpdate(G.course, G.t, 1 / 120);   // 先回りで動いた足場を、今の時刻の位置に戻す
   return { pts, mark };
 }
@@ -1858,11 +1895,11 @@ function drawMark(m) {
 const HAND_D = 'M8 2.5A1.5 1.5 0 0 1 11 2.5V10A1.5 1.5 0 0 1 14 10V11A1.5 1.5 0 0 1 17 11V12A1.5 1.5 0 0 1 20 12V17Q20 22 15 22H12Q9 22 7 19L4 15Q3 13.5 4.5 13Q5.8 12.6 7 14L8 15.5Z';
 const HAND = new Path2D(HAND_D);
 $('tutHandP').setAttribute('d', HAND_D);
-function drawHand(x, y, sc, press) {   // 指先が (x, y) に来るように描く。press：押している印の輪
-  if (press) { cx.strokeStyle = 'rgba(255,255,255,.9)'; cx.lineWidth = 3; cx.beginPath(); cx.arc(x, y, 10 + 4 * press, 0, 7); cx.stroke(); }
-  cx.save(); cx.translate(x, y); cx.scale(sc, sc); cx.translate(-9.5, -1);
-  cx.fillStyle = '#fff'; cx.fill(HAND); cx.strokeStyle = COL.ink; cx.lineWidth = 1.6 / sc * 1.6; cx.lineJoin = 'round'; cx.stroke(HAND);
-  cx.restore();
+function drawHand(x, y, sc, press, g = cx) {   // 指先が (x, y) に来るように描く。press：押している印の輪。g：描く先
+  if (press) { g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 3; g.beginPath(); g.arc(x, y, 10 + 4 * press, 0, 7); g.stroke(); }
+  g.save(); g.translate(x, y); g.scale(sc, sc); g.translate(-9.5, -1);
+  g.fillStyle = '#fff'; g.fill(HAND); g.strokeStyle = COL.ink; g.lineWidth = 1.6 / sc * 1.6; g.lineJoin = 'round'; g.stroke(HAND);
+  g.restore();
 }
 function drawDragHint(pl) {
   const t = (G.t % 1.6) / 1.2, f = Math.min(1, t), x0 = pl.x + 40, y0 = pl.y - pl.h / 2 + 20, x = x0 - 20 * f, y = y0 + 70 * f;
@@ -1879,7 +1916,7 @@ const taRank = t => TA_RANKS.find(([s]) => t <= s)[1];
 const MODE_NAME = { time30: '30秒アタック', ta1000: '1000mタイムアタック', normal: 'エンドレス', tutorial: 'エンドレス' };
 function endGame() {
   aim = null;
-  if (G.mode === 'tut') { if (G.clear && tut) { tutGoal(); return; } tut = null; tutI = -1; tutLock(false); $('tut').classList.remove('on'); show('title'); return; }   // チュートリアルは記録に残さない
+  if (G.mode === 'tut') { if (G.clear && tut) { tutGoal(); return; } tut = null; tutI = -1; tutLock(false); $('tut').classList.remove('on'); $('bEffH').style.display = 'none'; show('title'); return; }   // チュートリアルは記録に残さない
   if (tut) { $('tut').classList.remove('on'); $('tutZones').classList.remove('on'); tut = null; }
   const mode = G.mode === 'endless' ? 'normal' : G.mode, m = Math.floor(-G.bestY / P.unitPerM), t = +G.t.toFixed(2), clear = !!G.clear;
   $('why').textContent = { spike: 'トゲに のった！', enemy: 'ぶつかった！', tide: 'おいつかれた！', time: 'タイムアップ！', goal: 'ゴール！' }[rs.why] || '';
@@ -2035,7 +2072,7 @@ function buildCard() {
   g.fillStyle = '#fff'; g.font = `900 52px ${F}`; g.fillText('おえかき', 0, 2); g.restore();
   g.font = `900 120px ${F}`; g.lineWidth = 14; g.strokeStyle = COL.ink; g.lineJoin = 'round'; g.strokeText('ジャンプ', W / 2, 230); g.fillStyle = '#fff'; g.fillText('ジャンプ', W / 2, 230);
   // 白いカード
-  g.fillStyle = '#fff'; g.beginPath(); g.roundRect(90, 330, W - 180, 900, 60); g.fill();
+  g.fillStyle = '#fff'; g.fillRect(90, 330, W - 180, 900);
   // 描いたキャラ
   const b = stats.bbox, k = 380 / Math.max(b.w, b.h); g.save(); g.translate(W / 2, 330 + 70 + b.h * k);
   drawBody(g, newDeform(), b.w * k, b.h * k, 1, false, 0, body); g.restore();
@@ -2105,15 +2142,182 @@ function chartUI() {
     const d = document.createElement('div'), c = document.createElement('canvas'); c.width = c.height = 80;
     const g = c.getContext('2d'); g.setTransform(80 / P.boxSize * 0.8, 0, 0, 80 / P.boxSize * 0.8, 8, 8); strokePath(g, mk());
     const name = EFFECTS.find(e => e.id === id).name, t = document.createElement('span');
-    t.innerHTML = `${name}<small>${how}</small>`; d.append(c, t); box.append(d);
+    t.innerHTML = `${name}<small>${how}　▶ くわしく</small>`; d.append(c, t); box.append(d);
+    d.addEventListener('pointerdown', e => e.stopPropagation()); d.addEventListener('click', () => { $('howto').classList.remove('on'); effHelp([id], mk()); });
   }
+}
+// ----- 特殊効果の説明：ていねいなアニメーション（決定のあとの欄・かたちの表・チュートリアルの？から）-----
+const EFFECT_HELP = {
+  bounce: ['着地すると ポヨンと弾む。弾んだ瞬間に ジャンプすると いつもより高く跳べる', '着地の少し前に 引っぱっておき、弾んだ瞬間に はなす', '続けるほど どんどん高くなる（下の足場に落ちると 数え直し）'],
+  swing: ['とがった先が ロープのように伸びて、足場の端（角）に ひっかかる', '端の近くを通ると 自動でつかまる。揺れている間に 引っぱって はなす', '前へ大きく 揺れたところで はなすと、遠くまで 飛び出せる'],
+  kick: ['黄色い壁に ペタッと はりつける', 'はりついたら、壁と反対の向きへ 跳ぶように 引っぱって はなす', '壁から壁へ 続けて キックすると 加速する'],
+  stab: ['とがった先が 壁や 足場の裏に ザクッと刺さって止まる', '刺さったら いっぱいに引いたまま 待つと ため。はなすと 飛び出す', '足場の裏に刺さったら 上を狙うと、そのまま 突き抜けて 上に乗れる'],
+  high: ['地面で いっぱいに引いたまま 待つと 力がたまる', 'いっぱいに引いて、まわりの輪が 一周するまで 待ってから はなす', 'ためると ふつうより ずっと高く 跳べる'],
+  glide: ['空中で 引っぱっている間は、ゆっくり落ちながら 狙った方へ 流れる', '落ちはじめたら 引っぱったまま、行きたい向きを 決める', '遠くの足場まで 横に 運べる。着地したら はなす'],
+  air: ['空中で もう1回 ジャンプできる', '空中で引っぱると スローになる。その間に 狙って はなす', '着地すると また使える'],
+  big: ['止まらずに 続けて跳ぶと、2回目が 大ジャンプになる', '着地したら すぐ 次を引いて はなす（頭の上の点が 2つ光る）', '地面で止まると 数え直し'],
+};
+const eh = { ids: [], i: 0, t0: 0, B: null, bb: null, on: false, D: newDeform() };
+function effHelp(ids, strokesFor) {   // ids：見せる効果（1〜2個）。strokesFor：キャラの形（無ければ今のキャラ）
+  eh.ids = ids; eh.i = 0; eh.on = true;
+  if (strokesFor) { const st = analyzeShape(strokesFor); eh.B = makeBody(st, strokesFor); eh.bb = st.bbox; } else { eh.B = body; eh.bb = stats.bbox; }
+  $('ehTabs').innerHTML = ids.length > 1 ? ids.map((id, i) => `<button data-i="${i}">${EFFECTS.find(e => e.id === id).name}</button>`).join('') : '';
+  $('ehTabs').style.display = ids.length > 1 ? '' : 'none';
+  ehShow(0); $('effHelp').classList.add('on'); requestAnimationFrame(ehLoop);
+}
+function ehShow(i) {
+  eh.i = i; eh.t0 = performance.now(); const id = eh.ids[i], H = EFFECT_HELP[id];
+  $('ehName').textContent = EFFECTS.find(e => e.id === id).name;
+  for (const b of $('ehTabs').children) b.classList.toggle('on', +b.dataset.i === i);
+  $('ehTxt').innerHTML = ''; [['どうなる', H[0]], ['操作', H[1]], ['コツ', H[2]]].forEach(([k, v]) => { const p = document.createElement('p'); p.innerHTML = `<b>${k}</b>`; p.append(v); $('ehTxt').append(p); });
+}
+$('ehTabs').addEventListener('pointerdown', e => e.stopPropagation());
+$('ehTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) ehShow(+b.dataset.i); });
+$('abl').addEventListener('click', e => { const b = e.target.closest('.ehb'); if (!b) return; const ids = stats.effects.map(x => x.id); effHelp(ids); ehShow(ids.indexOf(b.dataset.id)); });
+$('bEffH').addEventListener('pointerdown', e => { e.stopPropagation(); if (stats) effHelp(stats.effects.map(x => x.id)); });
+// 見本の動き：t 秒の時点の状態を返す。x, y は足元。fin は指（sx,sy→x,y、up で離した）。cap は上に出す説明
+const EH_GY = 185;
+const arcAt = (x0, y0, x1, y1, h, u) => [x0 + (x1 - x0) * u, y0 + (y1 - y0) * u - h * 4 * u * (1 - u)];
+const seg = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
+const EH_DEMO = {
+  bounce: { T: 2.8, draw(g, t) {   // 上から落ちて、弾んだ瞬間に離して、もっと高く
+    const S = { x: 150, face: 1 }, GY = EH_GY;
+    ehDash(g, 0, GY - 70, 300, 'ふつうの高さ');
+    if (t < 0.9) { const u = t / 0.9; S.y = 66 + (GY - 66) * u * u; S.cap = '① 着地の前に 引っぱっておく'; }
+    else if (t < 1.1) { S.y = GY; S.sq = -0.5 * Math.sin(seg(t, 0.9, 1.1) * Math.PI); S.cap = '② 弾んだ瞬間に はなす！'; S.pop = ['ポヨン', 150, GY - 50]; }
+    else if (t < 2.3) { const u = 1 - (1 - seg(t, 1.1, 2.3)) ** 2; S.y = GY - (GY - 66) * u; S.cap = '③ いつもより 高く跳ぶ！'; S.lines = true; }
+    else { S.y = 66; S.cap = '続けるほど もっと高く'; }
+    if (t > 0.3 && t < 1.0) S.fin = { sx: 220, sy: 120, x: 220, y: 120 + 50 * seg(t, 0.3, 0.6) };
+    else if (t >= 1.0 && t < 1.35) S.fin = { sx: 220, sy: 120, x: 220, y: 170, up: true };
+    return S;
+  } },
+  swing: { T: 4.2, scene(g) { ehPlat(g, 170, 300, 80); }, draw(g, t) {   // 角にひっかかって揺れ、前で離して上の足場へ
+    const A = [170, 80], L = 52, at = phi => [A[0] + L * Math.sin(phi), A[1] + L * Math.cos(phi)];
+    const S = { face: 1 }, c0 = at(-0.9);
+    g.setLineDash([3, 5]); g.strokeStyle = 'rgba(29,36,64,.35)'; g.lineWidth = 2; g.beginPath(); g.arc(A[0], A[1], 30, 0, 7); g.stroke(); g.setLineDash([]);
+    if (t < 0.9) { const p = arcAt(40, EH_GY, c0[0], c0[1] + 18, 70, seg(t, 0, 0.9)); S.x = p[0]; S.y = p[1]; S.cap = '① 足場の端の 近くを通ると'; }
+    else if (t < 2.9) { const phi = -0.9 * Math.cos(Math.PI * (t - 0.9) / 0.75), c = at(phi); S.x = c[0]; S.y = c[1] + 18; S.rope = A; S.cap = t < 2.1 ? '② ひっかかって ゆれる' : '③ 前へ ゆれたところで はなす';
+      if (t < 1.15) S.pop = ['ガシッ', A[0], A[1] - 14]; }
+    else if (t < 3.5) { const c = at(0.45), p = arcAt(c[0], c[1] + 18, 245, 80, 60, seg(t, 2.9, 3.5)); S.x = p[0]; S.y = p[1]; S.cap = '④ 飛び出して 上の足場へ！'; S.lines = true; }
+    else { S.x = 245; S.y = 80; S.cap = '④ 飛び出して 上の足場へ！'; }
+    if (t > 2.15 && t < 2.9) S.fin = { sx: 120, sy: 130, x: 120 - 30 * seg(t, 2.15, 2.5), y: 130 + 30 * seg(t, 2.15, 2.5) };
+    else if (t >= 2.9 && t < 3.2) S.fin = { sx: 120, sy: 130, x: 90, y: 160, up: true };
+    return S;
+  } },
+  kick: { T: 3.6, scene(g) { ehWall(g, 0, 34); ehWall(g, 266, 300); }, draw(g, t) {   // 壁にはりつき、反対へ引っぱってキック
+    const S = { face: 1 }, L = 34 + 16, R = 266 - 16;
+    if (t < 0.6) { const p = arcAt(150, EH_GY, L, 120, 50, seg(t, 0, 0.6)); S.x = p[0]; S.y = p[1]; S.cap = '① 黄色い壁に とびつく'; }
+    else if (t < 1.4) { S.x = L; S.y = 120 + 10 * seg(t, 0.6, 1.4); S.cap = t < 0.85 ? '① 黄色い壁に とびつく' : '② 壁と反対へ 引っぱって はなす'; if (t < 0.85) S.pop = ['ペタッ', L, 80]; }
+    else if (t < 1.9) { const p = arcAt(L, 130, R, 75, 40, seg(t, 1.4, 1.9)); S.x = p[0]; S.y = p[1]; S.cap = '③ キック！ 壁から壁へ'; S.lines = true; if (t < 1.6) S.pop = ['キック', L + 20, 100]; }
+    else if (t < 2.5) { S.x = R; S.y = 75 + 6 * seg(t, 1.9, 2.5); S.face = -1; S.cap = '③ キック！ 壁から壁へ'; }
+    else if (t < 3.0) { const p = arcAt(R, 81, L, 25, 40, seg(t, 2.5, 3.0)); S.x = p[0]; S.y = p[1]; S.face = -1; S.cap = '④ 続けるほど 加速する'; S.lines = true; }
+    else { const p = arcAt(L, 25, 150, -60, 30, seg(t, 3.0, 3.6)); S.x = p[0]; S.y = p[1]; S.cap = '④ 続けるほど 加速する'; S.lines = true; }
+    if (t > 0.85 && t < 1.4) S.fin = { sx: 110, sy: 120, x: 110 - 30 * seg(t, 0.85, 1.2), y: 120 + 30 * seg(t, 0.85, 1.2) };
+    else if (t >= 1.4 && t < 1.65) S.fin = { sx: 110, sy: 120, x: 80, y: 150, up: true };
+    else if (t > 2.0 && t < 2.5) S.fin = { sx: 190, sy: 100, x: 190 + 30 * seg(t, 2.0, 2.3), y: 100 + 30 * seg(t, 2.0, 2.3) };
+    else if (t >= 2.5 && t < 2.75) S.fin = { sx: 190, sy: 100, x: 220, y: 130, up: true };
+    return S;
+  } },
+  stab: { T: 3.8, scene(g) { ehPlat(g, 100, 200, 70); }, draw(g, t) {   // 足場の裏に刺さり、ためて、上へ突き抜ける
+    const S = { x: 150, face: 1 }, H = ehH(), under = 80 + H;
+    if (t < 0.5) { const u = 1 - (1 - seg(t, 0, 0.5)) ** 2; S.y = EH_GY + (under - EH_GY) * u; S.cap = '① 足場の裏に ザクッと刺さる'; }
+    else if (t < 2.1) { S.y = under; S.cap = t < 0.9 ? '① 足場の裏に ザクッと刺さる' : '② いっぱいに引いて 待つと ため'; if (t < 0.9) S.pop = ['ザクッ', 150, 64]; S.ring = seg(t, 1.2, 1.9); }
+    else if (t < 2.9) { const p = arcAt(150, under, 150, 70, 50, seg(t, 2.1, 2.9)); S.y = p[1]; S.cap = '③ はなすと 上へ 突き抜ける！'; S.lines = true; S.front = true; }
+    else { S.y = 70; S.cap = '③ はなすと 上へ 突き抜ける！'; }
+    if (t > 0.9 && t < 2.1) S.fin = { sx: 230, sy: 110, x: 230, y: 110 + 60 * seg(t, 0.9, 1.2) };
+    else if (t >= 2.1 && t < 2.4) S.fin = { sx: 230, sy: 110, x: 230, y: 170, up: true };
+    return S;
+  } },
+  high: { T: 3.4, draw(g, t) {   // いっぱいに引いたまま待って、ためジャンプ
+    const S = { x: 150, face: 1 };
+    ehDash(g, 0, EH_GY - 70, 300, 'ふつうの高さ');
+    if (t < 1.5) { S.y = EH_GY; S.sq = -0.25 * seg(t, 0.3, 0.7); S.ring = seg(t, 0.7, 1.4); S.cap = t < 0.7 ? '① いっぱいに 引いたまま' : '② 輪が 一周するまで 待つ'; if (t > 1.4) S.pop = ['ため完了', 150, EH_GY - 70]; }
+    else if (t < 3.1) { const p = arcAt(150, EH_GY, 150, EH_GY, 132, seg(t, 1.5, 3.1)); S.y = p[1]; S.cap = '③ はなすと ためジャンプ！'; S.lines = t < 2.3; }
+    else { S.y = EH_GY; S.cap = '③ はなすと ためジャンプ！'; }
+    if (t > 0.3 && t < 1.5) S.fin = { sx: 220, sy: 110, x: 220, y: 110 + 60 * seg(t, 0.3, 0.7) };
+    else if (t >= 1.5 && t < 1.8) S.fin = { sx: 220, sy: 110, x: 220, y: 170, up: true };
+    return S;
+  } },
+  glide: { T: 3.8, scene(g) { ehPlat(g, 220, 300, 120); }, draw(g, t) {   // 落ちはじめに引っぱったまま、ゆっくり横へ
+    const S = { face: 1 };
+    if (t > 0.7) { g.setLineDash([3, 6]); g.strokeStyle = 'rgba(29,36,64,.35)'; g.lineWidth = 2; g.beginPath(); g.moveTo(95, 60); g.lineTo(95, EH_GY); g.stroke(); g.setLineDash([]); ehLabel(g, 'ふつう', 95, EH_GY - 8); }
+    if (t < 0.7) { const u = seg(t, 0, 0.7), p = [40 + 50 * u, EH_GY - (EH_GY - 45) * (1 - (1 - u) ** 2)]; S.x = p[0]; S.y = p[1]; S.cap = '落ちはじめたら…'; }
+    else if (t < 0.9) { S.x = 90 + 5 * seg(t, 0.7, 0.9); S.y = 45 + 12 * seg(t, 0.7, 0.9) ** 2; S.cap = '① 引っぱったまま'; }
+    else if (t < 2.8) { const u = seg(t, 0.9, 2.8); S.x = 95 + 160 * u; S.y = 57 + 63 * u + Math.sin(u * 12) * 2; S.cap = u < 0.35 ? '① 引っぱったまま' : '② ゆっくり落ちながら 狙った方へ'; }
+    else { S.x = 255; S.y = 120; S.cap = '② 遠くの足場へ 運べる'; }
+    if (t > 0.75 && t < 2.8) S.fin = { sx: 70, sy: 140, x: 70 - 30 * seg(t, 0.75, 1.0), y: 140 + 25 * seg(t, 0.75, 1.0) };
+    else if (t >= 2.8 && t < 3.1) S.fin = { sx: 70, sy: 140, x: 40, y: 165, up: true };
+    return S;
+  } },
+  air: { T: 3.6, scene(g) { ehPlat(g, 190, 290, 55); }, draw(g, t) {   // 空中で引っぱるとスロー、離すともう1回
+    const S = { face: 1 };
+    if (t < 0.6) { const u = seg(t, 0, 0.6), p = [50 + 70 * u, EH_GY - (EH_GY - 95) * (1 - (1 - u) ** 2)]; S.x = p[0]; S.y = p[1]; S.cap = '空中で…'; }
+    else if (t < 1.8) { const u = seg(t, 0.6, 1.8); S.x = 120 + 8 * u; S.y = 95 + 8 * u * u; S.cap = '① 引っぱると スローになる'; S.slow = true; }
+    else if (t < 2.4) { const p = arcAt(128, 103, 240, 55, 50, seg(t, 1.8, 2.4)); S.x = p[0]; S.y = p[1]; S.cap = '② はなすと もう1回 ジャンプ！'; S.lines = true; S.burst = seg(t, 1.8, 2.1); S.bx = 128; S.by = 103 - ehH() / 2; }
+    else { S.x = 240; S.y = 55; S.cap = '着地すると また使える'; }
+    if (t > 0.65 && t < 1.8) S.fin = { sx: 110, sy: 150, x: 110 - 25 * seg(t, 0.65, 0.95), y: 150 + 25 * seg(t, 0.65, 0.95) };
+    else if (t >= 1.8 && t < 2.1) S.fin = { sx: 110, sy: 150, x: 85, y: 175, up: true };
+    return S;
+  } },
+  big: { T: 3.8, draw(g, t) {   // 着地してすぐ次を跳ぶと、2回目が大ジャンプ
+    const S = { face: 1, dots: 0 };
+    if (t < 0.6) { const p = arcAt(40, EH_GY, 105, EH_GY, 55, seg(t, 0, 0.6)); S.x = p[0]; S.y = p[1]; S.dots = 1; S.cap = '① 着地したら すぐ 次を跳ぶ'; }
+    else if (t < 0.75) { S.x = 105; S.y = EH_GY; S.sq = -0.3; S.dots = 1; S.cap = '① 着地したら すぐ 次を跳ぶ'; }
+    else if (t < 2.1) { const p = arcAt(105, EH_GY, 245, EH_GY, 128, seg(t, 0.75, 2.1)); S.x = p[0]; S.y = p[1]; S.dots = 2; S.big = true; S.cap = '② 2回目が 大ジャンプ！'; S.lines = t < 1.5; if (t < 1.2) S.pop = ['大ジャンプ！', 105, EH_GY - 60]; S.shake = t < 0.95; }
+    else { S.x = 245; S.y = EH_GY; S.cap = '地面で 止まると 数え直し'; }
+    if (t < 0.12) S.fin = { sx: 60, sy: 120, x: 30, y: 150, up: true };
+    else if (t > 0.55 && t < 0.75) S.fin = { sx: 170, sy: 120, x: 170 - 25 * seg(t, 0.55, 0.68), y: 120 + 30 * seg(t, 0.55, 0.68) };
+    else if (t >= 0.75 && t < 1.0) S.fin = { sx: 170, sy: 120, x: 145, y: 150, up: true };
+    return S;
+  } },
+};
+function ehH() { const b = eh.bb, k = 36 / Math.max(b.w, b.h); return b.h * k; }
+function ehPlat(g, x1, x2, y) { g.fillStyle = COL.plat; g.fillRect(x1, y, x2 - x1, 12); g.fillStyle = COL.plat2; g.fillRect(x1, y, x2 - x1, 3.5); }
+function ehWall(g, x1, x2) { g.fillStyle = COL.plat; g.fillRect(x1, 0, x2 - x1, 210); g.fillStyle = COL.acc2; g.fillRect(x1 < 150 ? x2 - 4 : x1, 0, 4, 210); }
+function ehLabel(g, txt, x, y, col = 'rgba(29,36,64,.55)') { g.font = '800 11px ' + UIF; g.textAlign = 'center'; g.textBaseline = 'bottom'; g.fillStyle = col; g.fillText(txt, x, y); g.textAlign = 'left'; }
+function ehDash(g, x1, y, x2, txt) { g.setLineDash([4, 6]); g.strokeStyle = 'rgba(29,36,64,.3)'; g.lineWidth = 2; g.beginPath(); g.moveTo(x1, y); g.lineTo(x2, y); g.stroke(); g.setLineDash([]); g.font = '800 11px ' + UIF; g.fillStyle = 'rgba(29,36,64,.5)'; g.textBaseline = 'bottom'; g.fillText(txt, x1 + 6, y - 3); }
+function ehLoop(now) {
+  if (!$('effHelp').classList.contains('on')) { eh.on = false; return; }
+  const id = eh.ids[eh.i], M = EH_DEMO[id], c = $('ehCv'), g = c.getContext('2d'), t = ((now - eh.t0) / 1000) % (M.T + 0.5);
+  g.setTransform(c.width / 300, 0, 0, c.height / 210, 0, 0);
+  const sky = g.createLinearGradient(0, 0, 0, 210); sky.addColorStop(0, '#9fdcff'); sky.addColorStop(1, '#dff4ff'); g.fillStyle = sky; g.fillRect(0, 0, 300, 210);
+  g.fillStyle = COL.plat; g.fillRect(0, EH_GY, 300, 25); g.fillStyle = COL.plat2; g.fillRect(0, EH_GY, 300, 3.5);
+  if (M.scene) M.scene(g);
+  const tt = Math.min(t, M.T), S = M.draw(g, tt);
+  g.globalAlpha = Math.min(1, tt / 0.2, (M.T + 0.5 - t) / 0.3);
+  if (S.slow) { g.fillStyle = 'rgba(80,140,255,.12)'; g.fillRect(0, 0, 300, 210); ehLabel(g, 'スロー', 268, 204, '#3a6fd8'); }
+  if (S.shake) g.translate(Math.sin(now / 20) * 2, 0);
+  const b = eh.bb, k = 36 / Math.max(b.w, b.h), sw = b.w * k, sh = b.h * k;
+  if (S.rope) { g.strokeStyle = COL.ink; g.lineWidth = 2.5; g.beginPath(); g.moveTo(S.rope[0], S.rope[1]); g.lineTo(S.x, S.y - sh); g.stroke(); g.fillStyle = COL.acc2; g.beginPath(); g.arc(S.rope[0], S.rope[1], 4, 0, 7); g.fill(); }
+  if (S.lines) { g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 2; for (let i = -1; i <= 1; i++) { g.beginPath(); g.moveTo(S.x + i * 9, S.y + 6); g.lineTo(S.x + i * 9, S.y + 20); g.stroke(); } }
+  const D = eh.D; D.sq.p = S.sq || 0; D.wob.p = 0;
+  g.save(); g.translate(S.x, S.y); drawBody(g, D, sw, sh, S.face || 1, false, now / 1000, eh.B); g.restore();
+  if (S.front && M.scene) M.scene(g);   // 突き抜けるときは足場を手前に
+  if (S.ring > 0) { g.strokeStyle = COL.acc2; g.lineWidth = 4; g.beginPath(); g.arc(S.x, S.y - sh / 2, Math.max(sw, sh) / 2 + 10, -Math.PI / 2, -Math.PI / 2 + S.ring * Math.PI * 2); g.stroke(); }
+  if (S.dots) for (let i = 0; i < 2; i++) { g.beginPath(); g.arc(S.x - 5 + i * 10, S.y - sh - 10, 3.5, 0, 7); g.fillStyle = S.big ? COL.acc : i < S.dots ? COL.acc2 : 'rgba(255,255,255,.8)'; g.fill(); g.lineWidth = 1.5; g.strokeStyle = COL.ink; g.stroke(); }
+  if (S.burst > 0 && S.burst < 1) { g.fillStyle = COL.acc2; for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, r = 10 + 40 * S.burst; g.globalAlpha = 1 - S.burst; g.beginPath(); g.arc(S.bx + Math.cos(a) * r, S.by + Math.sin(a) * r, 3, 0, 7); g.fill(); } g.globalAlpha = 1; }
+  if (S.pop) { g.font = '900 14px ' + UIF; g.textAlign = 'center'; g.textBaseline = 'bottom'; g.lineWidth = 4; g.strokeStyle = '#fff'; g.strokeText(S.pop[0], S.pop[1], S.pop[2]); g.fillStyle = COL.ink; g.fillText(S.pop[0], S.pop[1], S.pop[2]); g.textAlign = 'left'; }
+  if (S.fin) {   // 指：押さえた所から引っぱる線と、跳ぶ向きの矢印
+    const f = S.fin, dx = f.x - f.sx, dy = f.y - f.sy, L = Math.hypot(dx, dy);
+    if (!f.up && L > 3) {
+      g.strokeStyle = '#fff'; g.lineWidth = 3; g.setLineDash([3, 6]); g.beginPath(); g.moveTo(f.sx, f.sy); g.lineTo(f.x, f.y); g.stroke(); g.setLineDash([]);
+      g.strokeStyle = COL.acc2; g.lineWidth = 5; g.lineCap = 'round'; const ax = -dx / L, ay = -dy / L, cy = S.y - sh / 2; g.beginPath(); g.moveTo(S.x + ax * 22, cy + ay * 22); g.lineTo(S.x + ax * (22 + L * 0.6), cy + ay * (22 + L * 0.6)); g.stroke();
+    }
+    g.globalAlpha *= f.up ? 0.6 : 1; drawHand(f.x, f.y + (f.up ? -8 : 0), 1.4, f.up ? 0 : 1, g); g.globalAlpha = 1;
+    if (f.up) ehLabel(g, 'はなす！', f.x + 14, f.y - 22, COL.acc);
+  }
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1;
+  g.setTransform(c.width / 300, 0, 0, c.height / 210, 0, 0);
+  if (S.cap) { g.font = '900 15px ' + UIF; g.textAlign = 'center'; g.textBaseline = 'top'; g.lineWidth = 5; g.strokeStyle = 'rgba(255,255,255,.95)'; g.strokeText(S.cap, 150, 10); g.fillStyle = COL.ink; g.fillText(S.cap, 150, 10); g.textAlign = 'left'; }
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  requestAnimationFrame(ehLoop);
 }
 // 遊び中のチュートリアル（初回だけ。？の表から、もう一度見られる）
 // チュートリアル：中心となる3つの形を順番に。描く画面には形を描いておき、押せるのは「決定」「のぼる！」だけ
 const TUT_STAGES = [
-  { strokes: () => TEMPLATES[0].strokes, eff: 'bounce', use: e => e.k === 'jump' && e.chain > 0, hints: [['下へ引っぱって はなす', e => e.k === 'jump', 2], ['止まらず跳ぶと 勢いが乗る', e => e.k === 'jump' && e.flow >= 2, 1], ['旗まで のぼろう', null, 0]] },
-  { strokes: () => TEMPLATES[1].strokes, eff: 'swing', use: e => e.k === 'jump' && e.from === 'hang', hints: [['足場の端に 近づくと つかまる', e => e.k === 'hook', 1], ['揺れて はなすと 飛び出す', e => e.k === 'jump' && e.from === 'hang', 1], ['旗まで のぼろう', null, 0]] },
-  { strokes: () => [[{ x: 60, y: 60 }, { x: 240, y: 60 }, { x: 240, y: 240 }, { x: 60, y: 240 }, { x: 60, y: 60 }]], eff: 'kick', use: e => e.k === 'jump' && e.from === 'wall', hints: [['黄色い壁に とびつこう', e => e.k === 'stick', 1], ['反対へ引っぱって キック', e => e.k === 'jump' && e.from === 'wall', 1], ['旗まで のぼろう', null, 0]] },
+  { strokes: () => TEMPLATES[0].strokes, eff: 'bounce', use: e => e.k === 'jump' && e.chain > 0, hints: [['下へ引っぱって はなす', e => e.k === 'jump', 1], ['バウンド：着地の前に引いておき\n弾んだ瞬間に はなすと 高く跳ぶ', e => e.k === 'jump' && e.chain > 0, 1], ['空中ジャンプ：空中で引っぱると スロー\nはなすと もう1回 跳べる', e => e.k === 'jump' && e.from === 'air', 1], ['旗まで のぼろう', null, 0]] },
+  { strokes: () => TEMPLATES[1].strokes, eff: 'swing', use: e => e.k === 'jump' && e.from === 'hang', hints: [['スイング：足場の端に近づくと\nとがった先が ひっかかる', e => e.k === 'hook', 1], ['揺れて 前へ来たところで はなすと\n遠くへ 飛び出す', e => e.k === 'jump' && e.from === 'hang', 1], ['ハイジャンプ：地面で いっぱいに引いて\n輪が一周するまで待つと ためジャンプ', e => e.k === 'jump' && e.pw > 1.1, 1], ['旗まで のぼろう', null, 0]] },
+  { strokes: () => [[{ x: 60, y: 60 }, { x: 240, y: 60 }, { x: 240, y: 240 }, { x: 60, y: 240 }, { x: 60, y: 60 }]], eff: 'kick', use: e => e.k === 'jump' && e.from === 'wall', hints: [['カベけり：黄色い壁に とびつくと\nペタッと はりつく', e => e.k === 'stick', 1], ['壁と反対へ 引っぱって はなすと キック\n壁から壁へ 続けると 加速', e => e.k === 'jump' && e.from === 'wall', 1], ['旗まで のぼろう', null, 0]] },
 ];
 let tut = null;
 function tutStart() { }   // （旧方式の入口。今は startTutorial を使う）
@@ -2134,6 +2338,7 @@ function tutFocus(id) {   // 押してほしいボタンを光らせ、指先の
 function tutLock(on) { document.body.classList.toggle('tutlock', on); if (!on) { tutFocus(null); $('coach').classList.remove('on'); } }
 function tutStage(i) {   // 描く画面を、形を描いた状態で見せる
   const T = TUT_STAGES[i];
+  $('tut').classList.remove('on'); $('bEffH').style.display = 'none';
   tutI = i; tutLock(true);
   strokes = copyStrokes(T.strokes()); undoStack.length = 0; undoStack.push(strokes.length); stats = null; body = null; G = null;
   ghostOff(); $('coach').textContent = `${i + 1}/${TUT_STAGES.length}　この形で のぼってみよう`; $('coach').classList.add('on');
@@ -2147,7 +2352,8 @@ function tutPlay(retry) {   // のぼる！：チュートリアル用のコー�
   cam = -viewH() * 0.62; acc = 0; overT = 0; show('play'); rs.warned = true;
   tut = { i, h: -1, n: 0, t: 0, step: -1, used: 0 };   // used：主役の効果を使った回数
   const eff = EFFECTS.find(e => e.id === TUT_STAGES[i].eff).name;
-  $('tutTxt').textContent = retry ? `「${eff}」を 使ってから 旗へ！` : `${i + 1}/${TUT_STAGES.length}　${stats.type}：` + st.effects.map(e => e.name).join(' × ');
+  $('tutTxt').textContent = retry ? `「${eff}」を 使ってから 旗へ！` : `${i + 1}/${TUT_STAGES.length}　${stats.type}\n` + st.effects.map(e => `${e.name}：${EFFECT_INFO[e.id]}`).join('\n');
+  $('bEffH').style.display = '';
   $('tut').classList.add('on');
 }
 function tutHint() {
@@ -2163,13 +2369,13 @@ function tutEvent(e) {
 function tutTick(dt) {
   if (!tut) return;
   tut.t += dt;
-  if (tut.h < 0 && tut.t > 1.8) { tut.h = 0; tutHint(); }   // 最初は形と効果の紹介（やり直しのときは、そのわけ）   // 最初は形と効果の紹介
+  if (tut.h < 0 && tut.t > 3.2) { tut.h = 0; tutHint(); }   // 最初は形と効果の紹介（やり直しのときは、そのわけ）   // 最初は形と効果の紹介
 }
 function tutGoal() {   // 旗に着いた：次の形へ。最後ならおわり。主役の効果を一度も使っていなければ、同じコースをやり直し
   if (!tut.used) { tutPlay(true); return; }
   const next = tut.i + 1;
   if (next < TUT_STAGES.length) { tutStage(next); return; }
-  tut = null; tutI = -1; tutLock(false); $('tut').classList.remove('on'); playMode = 'time30'; show('title'); toast('チュートリアル おわり！');
+  tut = null; tutI = -1; tutLock(false); $('tut').classList.remove('on'); $('bEffH').style.display = 'none'; playMode = 'time30'; show('title'); toast('チュートリアル おわり！');
 }
 
 let last = performance.now();
@@ -2180,6 +2386,7 @@ function frame(now) {
   if ((mode === 'play' || overT > 0) && G) {
     acc += dt; let n = 0; const h = 1 / 120;
     if (rs && rs.hitstop > 0) { rs.hitstop -= dt; acc = 0; }   // 大ジャンプの一瞬のタメ
+    if (eh.on) acc = 0;   // 特殊効果の説明を見ている間は止める
     while (acc >= h && n < 8) { step(G, h); acc -= h; n++; }
     if (acc > h) acc = 0;
     handleEvents(); tutTick(dt); render(dt);
