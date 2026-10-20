@@ -105,6 +105,15 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 #tutZones div{flex:1;display:flex;align-items:center;justify-content:center;font-size:56px;color:rgba(255,255,255,.9);text-shadow:0 3px 0 rgba(29,36,64,.4);animation:tz 1s ease-in-out infinite}
 #tutZones div:first-child{background:linear-gradient(90deg,rgba(255,79,139,.16),transparent)}
 #tutZones div:last-child{background:linear-gradient(-90deg,rgba(255,79,139,.16),transparent);animation-delay:.5s}
+/* チュートリアル：描く画面・結果画面を見せるが、押せるのは光っているボタンだけ */
+.tutlock #pad{pointer-events:none}
+.tutlock #tools,.tutlock #tpl,.tutlock #bUndo,.tutlock #bClear,.tutlock #qbtn,.tutlock #bRedraw{pointer-events:none;opacity:.35}
+.tutlock #bRedraw{visibility:hidden}
+.tutfocus{position:relative;z-index:6;animation:tf 1s ease-in-out infinite}
+@keyframes tf{0%,100%{box-shadow:0 4px 0 #b8255c,0 0 0 0 rgba(255,79,139,.55)}50%{box-shadow:0 4px 0 #b8255c,0 0 0 12px rgba(255,79,139,0)}}
+#tutHand{position:fixed;width:46px;height:46px;display:none;pointer-events:none;z-index:7;transform-origin:39% 4%;animation:th 1s ease-in-out infinite}
+#tutHand.on{display:block}
+@keyframes th{0%,100%{transform:rotate(-20deg) translate(0,0)}50%{transform:rotate(-20deg) translate(0,-7px) scale(.94)}}
 @keyframes tz{0%,100%{opacity:.35}50%{opacity:1}}
 /* 終わり */
 .card{position:relative;background:#fff;border-radius:24px;padding:16px 24px 14px;text-align:center;box-shadow:0 2px 0 rgba(29,36,64,.1);min-width:250px}
@@ -195,6 +204,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
     <button class="link" id="bRedraw">描き直す</button>
   </div>
 
+  <svg id="tutHand" viewBox="0 0 24 24"><path id="tutHandP" fill="#fff" stroke="#1d2440" stroke-width="1.6" stroke-linejoin="round"/></svg>
   <div id="tutZones"><div>◀</div><div>▶</div></div>
   <div id="tut"><p id="tutTxt"></p></div>
   <div id="hud">
@@ -248,7 +258,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 <script>
 /*SIM-START*/
 // ===== ゲームの計算部分（DOM を使わない。Node の試し遊びはここだけを読み込む）=====
-const VERSION = '0.11.0';
+const VERSION = '0.12.0';
 
 // ===== 調整用パラメータ =====
 const P = {
@@ -1252,7 +1262,7 @@ $('bSnd2').addEventListener('click', () => { auInit(); AU.on = !AU.on; store.set
 $('bT30').addEventListener('click', () => { auInit(); playMode = 'time30'; goDraw(); });
 $('bTA').addEventListener('click', () => { auInit(); playMode = 'ta1000'; goDraw(); });
 $('bTut').addEventListener('click', () => { auInit(); startTutorial(); });
-$('bHome').addEventListener('click', () => show('title'));
+$('bHome').addEventListener('click', () => { if (tutI >= 0) { tutI = -1; tutLock(false); playMode = 'time30'; } show('title'); });
 function goDraw() {
   strokes = []; undoStack.length = 0; stats = null; body = null; G = null;
   ghost = playMode === 'tutorial'; $('ghostTxt').style.display = ghost ? '' : 'none';
@@ -1458,13 +1468,14 @@ $('bOk').addEventListener('click', () => {
   if (!st.ok) return;
   SFX.ok(); stats = st; body = makeBody(st);
   st.effects = pickEffects(st);
+  if (tutI >= 0) tutForce(st);
   // 選ばれた特殊効果だけを★で表示（無いものは欄を出さない）
   $('abl').innerHTML = st.effects.map(e => `<div class="ef"><b>${e.name}</b><small>${EFFECT_INFO[e.id]}</small></div>`).join('');
   const ty = climbType(st);
   $('sum').textContent = ty.name; stats.type = ty.name; stats.effLine = ty.effLine; drawThumb($('resCv'), body, st.bbox);
   $('raw').textContent = DEBUG ? Object.entries(st.raw).map(([k, v]) => k + ' ' + (+v).toFixed(3)).join('\n') +
     '\n' + ['hook', 'flat', 'round', 'spike', 'tall', 'weight'].map(k => k + ' ' + st[k].toFixed(2)).join('\n') : '';
-  show('res');
+  show('res'); if (tutI >= 0) tutFocus('bGo');
 });
 let body = null;
 
@@ -1472,6 +1483,7 @@ let body = null;
 let G = null, acc = 0, cam = 0, rs = null, overT = 0;
 function startPlay() {
   auInit();
+  if (tutI >= 0) { tutPlay(); return; }
   G = newGame(stats, (Math.random() * 2 ** 32) >>> 0, playMode === 'time30' || playMode === 'ta1000' ? playMode : 'endless');
   rs = { D: newDeform(), bigT: 0, pops: [], seen: new Set(), shake: 0, lines: [], parts: [], trail: [], hitstop: 0, streak: 0, rankIdx: rankIndex(0) };
   cam = -viewH() * 0.62; acc = 0; overT = 0; show('play'); rs.warned = false;
@@ -1825,11 +1837,21 @@ function drawMark(m) {
   cx.lineWidth = 4; cx.strokeStyle = '#fff'; cx.strokeText(txt, m.x, m.y - 12); cx.fillStyle = m.k === 'over' ? COL.danger : COL.ink; cx.fillText(txt, m.x, m.y - 12);
   cx.textAlign = 'left';
 }
+// 指先のマーク：人差し指の先が (9.5, 1)。24×24 の枠
+const HAND_D = 'M8 2.5A1.5 1.5 0 0 1 11 2.5V10A1.5 1.5 0 0 1 14 10V11A1.5 1.5 0 0 1 17 11V12A1.5 1.5 0 0 1 20 12V17Q20 22 15 22H12Q9 22 7 19L4 15Q3 13.5 4.5 13Q5.8 12.6 7 14L8 15.5Z';
+const HAND = new Path2D(HAND_D);
+$('tutHandP').setAttribute('d', HAND_D);
+function drawHand(x, y, sc, press) {   // 指先が (x, y) に来るように描く。press：押している印の輪
+  if (press) { cx.strokeStyle = 'rgba(255,255,255,.9)'; cx.lineWidth = 3; cx.beginPath(); cx.arc(x, y, 10 + 4 * press, 0, 7); cx.stroke(); }
+  cx.save(); cx.translate(x, y); cx.scale(sc, sc); cx.translate(-9.5, -1);
+  cx.fillStyle = '#fff'; cx.fill(HAND); cx.strokeStyle = COL.ink; cx.lineWidth = 1.6 / sc * 1.6; cx.lineJoin = 'round'; cx.stroke(HAND);
+  cx.restore();
+}
 function drawDragHint(pl) {
   const t = (G.t % 1.6) / 1.2, f = Math.min(1, t), x0 = pl.x + 40, y0 = pl.y - pl.h / 2 + 20, x = x0 - 20 * f, y = y0 + 70 * f;
   cx.globalAlpha = t > 1 ? Math.max(0, 1 - (t - 1) * 3) : 0.85;
   cx.strokeStyle = '#ffffff'; cx.lineWidth = 3; cx.setLineDash([3, 6]); cx.beginPath(); cx.moveTo(x0, y0); cx.lineTo(x, y); cx.stroke(); cx.setLineDash([]);
-  cx.fillStyle = COL.acc; cx.beginPath(); cx.arc(x, y, 12, 0, 7); cx.fill();
+  drawHand(x, y, 1.7, t < 1 ? 1 : 0);   // 指で押さえて、下へ引っぱり、はなす
   cx.strokeStyle = COL.acc2; cx.lineWidth = 5; cx.lineCap = 'round';
   cx.beginPath(); cx.moveTo(pl.x, pl.y - pl.h - 10); cx.lineTo(pl.x + 8 * f, pl.y - pl.h - 10 - 30 * f); cx.stroke();
   cx.globalAlpha = 1;
@@ -1840,7 +1862,7 @@ const taRank = t => TA_RANKS.find(([s]) => t <= s)[1];
 const MODE_NAME = { time30: '30秒アタック', ta1000: '1000mタイムアタック', normal: 'エンドレス', tutorial: 'エンドレス' };
 function endGame() {
   aim = null;
-  if (G.mode === 'tut') { if (G.clear && tut) { tutGoal(); return; } tut = null; $('tut').classList.remove('on'); show('title'); return; }   // チュートリアルは記録に残さない
+  if (G.mode === 'tut') { if (G.clear && tut) { tutGoal(); return; } tut = null; tutI = -1; tutLock(false); $('tut').classList.remove('on'); show('title'); return; }   // チュートリアルは記録に残さない
   if (tut) { $('tut').classList.remove('on'); $('tutZones').classList.remove('on'); tut = null; }
   const mode = G.mode === 'endless' ? 'normal' : G.mode, m = Math.floor(-G.bestY / P.unitPerM), t = +G.t.toFixed(2), clear = !!G.clear;
   $('why').textContent = { spike: 'トゲに のった！', enemy: 'ぶつかった！', tide: 'おいつかれた！', time: 'タイムアップ！', goal: 'ゴール！' }[rs.why] || '';
@@ -1993,7 +2015,7 @@ function chartUI() {
   }
 }
 // 遊び中のチュートリアル（初回だけ。？の表から、もう一度見られる）
-// チュートリアル：中心となる3つの形を順番に操作してもらう（描く画面は出さない）
+// チュートリアル：中心となる3つの形を順番に。描く画面には形を描いておき、押せるのは「決定」「のぼる！」だけ
 const TUT_STAGES = [
   { strokes: () => TEMPLATES[0].strokes, eff: 'bounce', hints: [['下へ引っぱって はなす', e => e.k === 'jump', 2], ['止まらず跳ぶと 勢いが乗る', e => e.k === 'jump' && e.flow >= 2, 1], ['旗まで のぼろう', null, 0]] },
   { strokes: () => TEMPLATES[1].strokes, eff: 'swing', hints: [['足場の端に 近づくと つかまる', e => e.k === 'hook', 1], ['揺れて はなすと 飛び出す', e => e.k === 'jump' && e.from === 'hang', 1], ['旗まで のぼろう', null, 0]] },
@@ -2002,12 +2024,30 @@ const TUT_STAGES = [
 let tut = null;
 function tutStart() { }   // （旧方式の入口。今は startTutorial を使う）
 function startTutorial() { playMode = 'tutorial'; tutStage(0); }
-function tutStage(i) {
+addEventListener('resize', () => { const b = document.querySelector('.tutfocus'); if (b) tutFocus(b.id); });
+let tutI = -1;   // 何番目の形か（-1：チュートリアルではない）
+function tutForce(st) {   // 主役の効果は必ず入れる
+  const id = TUT_STAGES[tutI].eff;
+  if (!st.effects.some(e => e.id === id)) st.effects = [{ id, name: EFFECTS.find(e => e.id === id).name }, st.effects[0]];
+}
+function tutFocus(id) {   // 押してほしいボタンを光らせ、指先のマークを添える
+  document.querySelectorAll('.tutfocus').forEach(b => b.classList.remove('tutfocus'));
+  const h = $('tutHand');
+  if (!id) { h.classList.remove('on'); return; }
+  const b = $(id); b.classList.add('tutfocus'); b.focus({ preventScroll: true });
+  const r = b.getBoundingClientRect(); h.style.left = (r.right - 22 - 18) + 'px'; h.style.top = (r.bottom - 14 - 2) + 'px'; h.classList.add('on');   // 指先（枠の 18, 2px）をボタンに当てる
+}
+function tutLock(on) { document.body.classList.toggle('tutlock', on); if (!on) { tutFocus(null); $('coach').classList.remove('on'); } }
+function tutStage(i) {   // 描く画面を、形を描いた状態で見せる
   const T = TUT_STAGES[i];
-  strokes = copyStrokes(T.strokes()); undoStack.length = 0;
-  const st = analyzeShape(strokes); st.effects = pickEffects(st);
-  if (!st.effects.some(e => e.id === T.eff)) st.effects = [{ id: T.eff, name: EFFECTS.find(e => e.id === T.eff).name }, st.effects[0]];   // 主役の効果は必ず入れる
-  stats = st; body = makeBody(st); stats.type = shapeName(st); stats.effLine = '特殊効果 ' + st.effects.map(e => '「' + e.name + '」').join('×');
+  tutI = i; tutLock(true);
+  strokes = copyStrokes(T.strokes()); undoStack.length = 0; undoStack.push(strokes.length); stats = null; body = null; G = null;
+  ghostOff(); $('coach').textContent = `${i + 1}/${TUT_STAGES.length}　この形で のぼってみよう`; $('coach').classList.add('on');
+  padDraw(); show('draw'); tutFocus('bOk');
+}
+function tutPlay() {   // のぼる！：チュートリアル用のコースへ
+  const i = tutI, st = stats;
+  tutFocus(null);
   G = newGame(stats, 1, 'tut', i);
   rs = { D: newDeform(), bigT: 0, pops: [], seen: new Set(), shake: 0, lines: [], parts: [], trail: [], hitstop: 0, streak: 0, rankIdx: rankIndex(0) };
   cam = -viewH() * 0.62; acc = 0; overT = 0; show('play'); rs.warned = true;
@@ -2032,7 +2072,7 @@ function tutTick(dt) {
 function tutGoal() {   // 旗に着いた：次の形へ。最後ならおわり
   const next = tut.i + 1;
   if (next < TUT_STAGES.length) { tutStage(next); return; }
-  tut = null; $('tut').classList.remove('on'); playMode = 'time30'; show('title'); toast('チュートリアル おわり！');
+  tut = null; tutI = -1; tutLock(false); $('tut').classList.remove('on'); playMode = 'time30'; show('title'); toast('チュートリアル おわり！');
 }
 
 let last = performance.now();
