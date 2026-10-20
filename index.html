@@ -289,7 +289,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 <script>
 /*SIM-START*/
 // ===== ゲームの計算部分（DOM を使わない。Node の試し遊びはここだけを読み込む）=====
-const VERSION = '0.14.1';
+const VERSION = '0.14.2';
 
 // ===== 調整用パラメータ =====
 const P = {
@@ -341,7 +341,8 @@ const P = {
     // ハイジャンプ：高く・横は控えめ　ふわり：落ちるときの重力と最高落下速度を下げる
     highVy: 0.17, highVx: 0.25, glideG: 0.55, glideUpG: 0.42, glideHoldV: 110, glideSteer: 260, glideFall: 0.5, glideAssist: 22, glideMagnet: 0.8,
     // 空中ジャンプ：空中で1回だけ跳べる（強さ airPow0 + airPow1×★）
-    airPow0: 0.45, airPow1: 0.55, airHold: 1.4, airSlow: 0.25,   // airHold：空中で狙うとスローになる秒数、airSlow：そのときの速さ
+    airPow0: 0.45, airPow1: 0.55, airHold: 1.4, airSlow: 0.25, bouncePrep: 0.6, bounceGrace: 0.25,   // bounceGrace：着地の前から引いていたら、弾んでからこの秒数以内に離してもバウンドで跳ぶ。bouncePrep：バウンドを持つキャラが、着地まで この秒数以内に引き始めたら空中ジャンプにせず、着地で跳ぶ
+      // airHold：空中で狙うとスローになる秒数、airSlow：そのときの速さ
     // 大ジャンプ：2回目で大ジャンプが出る（★が少ないと倍率を少し下げる）
     bigLess: 0.5, bigPlus: 0.28,
   },
@@ -863,7 +864,7 @@ function newGame(stats, seed, mode = 'endless', tutCourse = -1) {
   return G;
 }
 // 入力：引っ張って離す。ax, ay は「飛ぶ向き」（画面の向き。上が -）、pw は強さ 0..1
-function launch(G, ax, ay, pw) { const L = Math.hypot(ax, ay) || 1; G.buf = { ax: ax / L, ay: ay / L, pw: clamp(pw, 0, P.pull.chargeMax), t: G.t }; }
+function launch(G, ax, ay, pw) { const L = Math.hypot(ax, ay) || 1; G.buf = { ax: ax / L, ay: ay / L, pw: clamp(pw, 0, P.pull.chargeMax), t: G.t, noAir: !!G.pl.prep }; G.pl.prep = false; }   // noAir：バウンドの準備で引いた入力は、空中ジャンプにしない
 function tap(G, dir) { launch(G, dir * 0.3, -1, 1); }
 // 空中で狙い始めたら止まる（空中ジャンプが残っているときだけ）。off で解除
 function glideHold(G, on, ax) {
@@ -873,10 +874,11 @@ function glideHold(G, on, ax) {
 }
 function airHold(G, on) {
   const pl = G.pl;
-  if (on && pl.st === 'air' && pl.airLeft > 0 && !landingSoon(G) && G.t - pl.lastGroundT > P.coyoteTime) {
+  if (on) pl.prep = pl.st === 'air' && G.ab.bounceJump > 0 && landingSoon(G, P.ab.bouncePrep);   // バウンドの準備
+  if (on && !pl.prep && pl.st === 'air' && pl.airLeft > 0 && !landingSoon(G) && G.t - pl.lastGroundT > P.coyoteTime) {
     if (!(pl.hoverT > 0)) G.ev.push({ k: 'hover' });
     pl.hoverT = P.ab.airHold;
-  } else if (!on) pl.hoverT = 0;
+  } else if (!on) { pl.hoverT = 0; pl.prep = false; }
 }   // 自動プレイ用：その向きへ全力で引いた扱い
 
 function step(G, dt) {
@@ -931,7 +933,8 @@ function tryJump(G, a) {
   else if (pl.st === 'stuck') kind = 'stuck';
   else if (pl.st === 'wall' && ab.wallOk) kind = 'wall';
   else if (pl.st === 'ground' || (pl.st === 'air' && t - pl.lastGroundT <= P.coyoteTime)) kind = 'ground';
-  else if (pl.st === 'air' && pl.airLeft > 0 && !landingSoon(G)) kind = 'air';   // 着地直前の入力は先行入力として残す
+  else if (pl.st === 'air' && a.noAir && t - pl.bounceT <= A.bounceGrace) kind = 'ground';   // 着地の前から引いていて、弾んだ直後に離した
+  else if (pl.st === 'air' && pl.airLeft > 0 && !a.noAir && !landingSoon(G)) kind = 'air';   // 着地直前の入力・バウンドの準備は先行入力として残す
   if (!kind) return false;
   const pw = a.pw, m = aimOf(a, kind === 'air' ? Q.minUpAir : Q.minUp);
   const lift = lerp(1, m.uy, Q.vyAngle);                    // 斜めでも上昇が小さくなりすぎない
@@ -950,7 +953,7 @@ function tryJump(G, a) {
   pl.flowN = cont ? Math.min((pl.flowN || 0) + 1, P.flow.max) : 0; const fl = 1 + P.flow.step * pl.flowN;   // 勢い
   const big = pl.combo >= ab.bigAt;
   const mul = (big ? ab.bigMul + ab.feverStep * Math.min(pl.fever, P.feverMax) : 1) * fl;
-  const onBounce = t - pl.bounceT <= P.coyoteTime + 0.03;
+  const onBounce = t - pl.bounceT <= P.coyoteTime + 0.03 || (a.noAir && t - pl.bounceT <= A.bounceGrace);
   if (kind === 'stuck') {   // 足場の裏から：ふつうのジャンプと同じ（上を狙えばそのまま足場を突き抜けて乗れる）
     pl.vx = hx * fl; pl.vy = -vyBase * mul; pl.stuckOn = null;
   } else if (kind === 'ground') {
@@ -985,9 +988,9 @@ function tryJump(G, a) {
   return true;
 }
 
-function landingSoon(G) {
+function landingSoon(G, T = P.bufferTime) {   // T 秒以内に足場へ着きそうか
   const pl = G.pl; if (pl.vy <= 0) return false;
-  const reach = pl.vy * P.bufferTime + 0.5 * G.ab.g * P.bufferTime * P.bufferTime;
+  const reach = pl.vy * T + 0.5 * G.ab.g * T * T;
   return G.course.plats.some(s => s.y >= pl.y && s.y - pl.y <= reach && pl.x + pl.hw > s.x1 - P.landAssist && pl.x - pl.hw < s.x2 + P.landAssist);
 }
 function solids(G) { return G.course.blocks; }
@@ -1432,8 +1435,8 @@ let stats = null;
 // 形の数値から「〇〇型」と登り方の一言を決める（いちばん強い特徴が主役、2番目が強ければ並べる）
 // 特殊効果のひとこと（短く）
 const EFFECT_INFO = {
-  bounce: '弾む瞬間に離すと高く', swing: '端につかまって飛び出す', kick: '壁から壁へ キックで加速', stab: '刺さって ためて 飛び出す',
-  high: '引いたまま待つと ためジャンプ', glide: '空中で引っぱると 滑空', air: '空中で止まって もう1回', big: '2回目で大ジャンプ',
+  bounce: '着地の前に引いて 弾んで高く', swing: '端につかまって飛び出す', kick: '壁から壁へ キックで加速', stab: '刺さって ためて 飛び出す',
+  high: '引いたまま待つと ためジャンプ', glide: '空中で引っぱると 滑空', air: '高いところで引くと もう1回', big: '2回目で大ジャンプ',
 };
 // 描き方の早見表：かたちの見本 → 効果
 const CHART = [
@@ -2166,13 +2169,13 @@ function chartUI() {
 }
 // ----- 特殊効果の説明：ていねいなアニメーション（決定のあとの欄・かたちの表・チュートリアルの？から）-----
 const EFFECT_HELP = {
-  bounce: ['着地すると ポヨンと弾む。弾んだ瞬間に ジャンプすると いつもより高く跳べる', '着地の少し前に 引っぱっておき、弾んだ瞬間に はなす', '続けるほど どんどん高くなる（下の足場に落ちると 数え直し）'],
+  bounce: ['着地すると ポヨンと弾む。弾んだ瞬間に ジャンプすると いつもより高く跳べる', '着地の少し前に 引っぱって はなす。早めに はなしても、弾んだ瞬間に 跳ぶ', '続けるほど どんどん高くなる（下の足場に落ちると 数え直し）'],
   swing: ['とがった先が ロープのように伸びて、足場の端（角）に ひっかかる', '端の近くを通ると 自動でつかまる。揺れている間に 引っぱって はなす', '前へ大きく 揺れたところで はなすと、遠くまで 飛び出せる'],
   kick: ['黄色い壁に ペタッと はりつける', 'はりついたら、壁と反対の向きへ 跳ぶように 引っぱって はなす', '壁から壁へ 続けて キックすると 加速する'],
   stab: ['とがった先が 壁や 足場の裏に ザクッと刺さって止まる', '刺さったら いっぱいに引いたまま 待つと ため。はなすと 飛び出す', '足場の裏に刺さったら 上を狙うと、そのまま 突き抜けて 上に乗れる'],
   high: ['地面で いっぱいに引いたまま 待つと 力がたまる', 'いっぱいに引いて、まわりの輪が 一周するまで 待ってから はなす', 'ためると ふつうより ずっと高く 跳べる'],
   glide: ['空中で 引っぱっている間は、ゆっくり落ちながら 狙った方へ 流れる', '落ちはじめたら 引っぱったまま、行きたい向きを 決める', '遠くの足場まで 横に 運べる。着地したら はなす'],
-  air: ['空中で もう1回 ジャンプできる', '空中で引っぱると スローになる。その間に 狙って はなす', '着地すると また使える'],
+  air: ['空中で もう1回 ジャンプできる', '着地まで まだ遠いうちに 引っぱると スローになる。その間に 狙って はなす', '着地のすぐ前に 引くと 空中ジャンプにならない（バウンドを持つキャラは 弾む準備になる）'],
   big: ['止まらずに 続けて跳ぶと、2回目が 大ジャンプになる', '着地したら すぐ 次を引いて はなす（頭の上の点が 2つ光る）', '地面で止まると 数え直し'],
 };
 const eh = { ids: [], i: 0, t0: 0, B: null, bb: null, on: false, D: newDeform() };
@@ -2333,7 +2336,7 @@ function ehLoop(now) {
 // 遊び中のチュートリアル（初回だけ。？の表から、もう一度見られる）
 // チュートリアル：中心となる3つの形を順番に。描く画面には形を描いておき、押せるのは「決定」「のぼる！」だけ
 const TUT_STAGES = [
-  { strokes: () => TEMPLATES[0].strokes, eff: 'bounce', use: e => e.k === 'jump' && e.chain > 0, hints: [['下へ引っぱって はなす', e => e.k === 'jump', 1], ['バウンド：着地の前に引いておき\n弾んだ瞬間に はなすと 高く跳ぶ', e => e.k === 'jump' && e.chain > 0, 1], ['空中ジャンプ：空中で引っぱると スロー\nはなすと もう1回 跳べる', e => e.k === 'jump' && e.from === 'air', 1], ['旗まで のぼろう', null, 0]] },
+  { strokes: () => TEMPLATES[0].strokes, eff: 'bounce', use: e => e.k === 'jump' && e.chain > 0, hints: [['下へ引っぱって はなす', e => e.k === 'jump', 1], ['バウンド：着地の少し前に 引っぱって はなすと\n弾んで 高く跳ぶ', e => e.k === 'jump' && e.chain > 0, 1], ['空中ジャンプ：跳んですぐ（高いところで）引くと スロー\nはなすと もう1回 跳べる', e => e.k === 'jump' && e.from === 'air', 1], ['旗まで のぼろう', null, 0]] },
   { strokes: () => TEMPLATES[1].strokes, eff: 'swing', use: e => e.k === 'jump' && e.from === 'hang', hints: [['スイング：足場の端に近づくと\nとがった先が ひっかかる', e => e.k === 'hook', 1], ['揺れて 前へ来たところで はなすと\n遠くへ 飛び出す', e => e.k === 'jump' && e.from === 'hang', 1], ['ハイジャンプ：地面で いっぱいに引いて\n輪が一周するまで待つと ためジャンプ', e => e.k === 'jump' && e.pw > 1.1, 1], ['旗まで のぼろう', null, 0]] },
   { strokes: () => [[{ x: 60, y: 60 }, { x: 240, y: 60 }, { x: 240, y: 240 }, { x: 60, y: 240 }, { x: 60, y: 60 }]], eff: 'kick', use: e => e.k === 'jump' && e.from === 'wall', hints: [['カベけり：黄色い壁に とびつくと\nペタッと はりつく', e => e.k === 'stick', 1], ['壁と反対へ 引っぱって はなすと キック\n壁から壁へ 続けると 加速', e => e.k === 'jump' && e.from === 'wall', 1], ['旗まで のぼろう', null, 0]] },
 ];
