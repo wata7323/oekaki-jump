@@ -264,7 +264,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
   </div>
   <div class="ov" id="recs">
     <h3 id="recH">じぶんの記録</h3>
-    <div id="recCtl"><div class="tabs" id="recTabs"><button data-v="me" class="on">じぶん</button><button data-v="rk">ランキング</button></div></div>
+    <div id="recCtl"><div class="tabs" id="recTabs"><button data-v="rk" class="on">みんな</button><button data-v="me">じぶん</button></div></div>
     <div id="rkCtl" style="display:none;flex-direction:column;align-items:center;gap:6px"><div class="tabs" id="rkModes"><button data-v="time30" class="on">30秒</button><button data-v="ta1000">1000m</button></div><div class="tabs" id="rkPers"><button data-v="day" class="on">今日</button><button data-v="all">全期間</button></div></div>
     <div id="recList"></div>
     <p class="cls">さわって とじる</p>
@@ -279,8 +279,6 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
   <div class="ov" id="zukan">
     <h3>図鑑</h3>
     <p class="sub2" id="zukSum"></p>
-    <p class="zkh2">かたち</p>
-    <div class="zg" id="zukShapes"></div>
     <p class="zkh2">特殊効果</p>
     <div class="zg z4" id="zukEff"></div>
     <p class="zkrank" id="zukRank"></p>
@@ -291,7 +289,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 <script>
 /*SIM-START*/
 // ===== ゲームの計算部分（DOM を使わない。Node の試し遊びはここだけを読み込む）=====
-const VERSION = '0.14.0';
+const VERSION = '0.14.1';
 
 // ===== 調整用パラメータ =====
 const P = {
@@ -1300,15 +1298,18 @@ function show(m) {
   mode = m;
   for (const [id, mm] of [['sTitle', 'title'], ['sDraw', 'draw'], ['sRes', 'res'], ['sOver', 'over']]) $(id).classList.toggle('on', m === mm);
   $('hud').classList.toggle('on', m === 'play');
-  if (m === 'title') titleInfo();
+  if (m === 'title') { titleInfo(); loadMine(); }
 }
 
 // ----- 遊び方（初回だけ自動）-----
 function howto(on) { $('howto').classList.toggle('on', on); }
-for (const id of ['howto', 'recs', 'zukan', 'effHelp']) $(id).addEventListener('pointerdown', e => { e.stopPropagation(); $(id).classList.remove('on'); });
+for (const id of ['howto', 'recs', 'zukan', 'effHelp']) {
+  $(id).addEventListener('pointerdown', e => e.stopPropagation());   // 遊び中に開いたときも、引っ張りの操作にしない
+  $(id).addEventListener('click', e => { if (e.target.closest('button, .tabs, #chart > div, #recCtl, #rkCtl')) return; $(id).classList.remove('on'); });
+}
 $('qbtn').addEventListener('click', () => { chartUI(); howto(true); });
 $('bHelp').addEventListener('click', () => { chartUI(); howto(true); });
-$('bRec').addEventListener('click', () => { recTab('me'); $('recs').classList.add('on'); });
+$('bRec').addEventListener('click', () => { recTab('rk'); $('recs').classList.add('on'); });   // みんなのランキングを先に
 $('bZuk').addEventListener('click', () => { zukanUI(); $('zukan').classList.add('on'); });
 $('bSnd2').addEventListener('click', () => { auInit(); AU.on = !AU.on; store.set('snd', AU.on); sndLabel(); });
 $('bT30').addEventListener('click', () => { auInit(); playMode = 'time30'; goDraw(); });
@@ -1536,6 +1537,7 @@ let G = null, acc = 0, cam = 0, rs = null, overT = 0;
 function startPlay() {
   auInit();
   if (tutI >= 0) { tutPlay(); return; }
+  rememberDrawing(strokes);
   G = newGame(stats, (Math.random() * 2 ** 32) >>> 0, playMode === 'time30' || playMode === 'ta1000' ? playMode : 'endless');
   rs = { D: newDeform(), bigT: 0, pops: [], seen: new Set(), shake: 0, lines: [], parts: [], trail: [], hitstop: 0, streak: 0, rankIdx: rankIndex(0) };
   cam = -viewH() * 0.62; acc = 0; overT = 0; show('play'); rs.warned = false;
@@ -2013,7 +2015,7 @@ function rkList() {
 function recTab(t) {
   rk.tab = t;
   for (const b of $('recTabs').children) b.classList.toggle('on', b.dataset.v === t);
-  $('recH').textContent = t === 'rk' ? 'ランキング' : 'じぶんの記録'; $('rkCtl').style.display = t === 'rk' ? 'flex' : 'none';
+  $('recH').textContent = t === 'rk' ? 'みんなのランキング' : 'じぶんの記録'; $('rkCtl').style.display = t === 'rk' ? 'flex' : 'none';
   if (t === 'rk') rkLoad(); else recsUI();
 }
 // タブは押しても画面を閉じない
@@ -2045,8 +2047,8 @@ function recsUI() {
 }
 function zukanUI() {   // スマホで1画面に収まるように：小さなマスに絵と名前だけ。称号は今と次だけ
   const zk = store.get('zk', { eff: {}, combo: {} }), names = zk.names || {};
-  const gotN = Object.keys(names).length, gotE = Object.keys(zk.eff).length, best = store.get('best', 0), ri = rankIndex(best);
-  $('zukSum').textContent = `かたち ${gotN}/${SHAPE_NAMES.length}　特殊効果 ${gotE}/8　称号 ${ri + 1}/${RANKS.length}` + (gotN >= SHAPE_NAMES.length && gotE >= 8 ? '　コンプリート！' : '');
+  const gotE = Object.keys(zk.eff).length, best = store.get('best', 0), ri = rankIndex(best);
+  $('zukSum').textContent = `特殊効果 ${gotE}/8　称号 ${ri + 1}/${RANKS.length}` + (gotE >= 8 ? '　コンプリート！' : '');
   const tile = (box, title, has, draw) => {
     const el = document.createElement('div'); el.className = 'zt' + (has ? '' : ' no');
     const c = document.createElement('canvas'); c.width = c.height = 80;
@@ -2054,8 +2056,7 @@ function zukanUI() {   // スマホで1画面に収まるように：小さな�
     if (has && draw) { const g = c.getContext('2d'); g.setTransform(80 / P.boxSize * 0.8, 0, 0, 80 / P.boxSize * 0.8, 8, 8); strokePath(g, draw()); }
     const t = document.createElement('span'); t.textContent = has ? title : '？'; el.append(c, t); box.append(el);
   };
-  const sb = $('zukShapes'), eb = $('zukEff'); sb.innerHTML = ''; eb.innerHTML = '';
-  for (const n of SHAPE_NAMES) tile(sb, n, names[n] !== undefined, null);
+  const eb = $('zukEff'); eb.innerHTML = '';
   for (const [id, how, mk] of CHART) tile(eb, EFFECTS.find(e => e.id === id).name, zk.eff[id] !== undefined, mk);
   const next = RANKS[ri + 1];
   $('zukRank').innerHTML = `称号「${RANKS[ri][1]}」` + (next ? `<small>次の称号まで あと ${next[0] - best}m</small>` : '<small>さいごの称号！</small>');
@@ -2110,12 +2111,29 @@ function shareRun() {   // 描いたキャラ入りの画像と文章を、端�
   window.open('https://x.com/intent/post?text=' + encodeURIComponent(shareText()), '_blank', 'noopener');
 }
 // タイトルで見本のキャラが跳ねる
-const TB = TEMPLATES.map(t => { const st = analyzeShape(t.strokes); return { st, B: makeBody(st, t.strokes), D: newDeform() }; });
+const tbOf = list => { const st = analyzeShape(list); return { st, B: makeBody(st, list), D: newDeform() }; };
+const TB = TEMPLATES.map(t => tbOf(t.strokes));
+let tbMine = [], tbCur = 0, tbCycle = -1;
+// 描いたキャラを覚えておく（線の点は整数に丸めて保存。見本そのままは入れない）
+const packStrokes = list => list.map(s => ({ p: s.map(q => [Math.round(q.x), Math.round(q.y)]), w: s.w, f: s.fill || undefined }));
+const unpackStrokes = list => list.map(s => Object.assign(s.p.map(([x, y]) => ({ x, y })), s.w ? { w: s.w } : {}, s.f ? { fill: true } : {}));
+function rememberDrawing(list) {
+  const pk = packStrokes(list), key = JSON.stringify(pk);
+  if (TEMPLATES.some(t => JSON.stringify(packStrokes(t.strokes)) === key)) return;
+  const mine = store.get('mine', []).filter(m => JSON.stringify(m) !== key);
+  mine.unshift(pk); store.set('mine', mine.slice(0, 6));
+}
+function loadMine() {
+  tbMine = [];
+  for (const m of store.get('mine', [])) { try { const list = unpackStrokes(m), T = tbOf(list); if (T.st.ok !== false && T.st.bbox) tbMine.push(T); } catch (e) { } }
+}
 function drawTitle(now) {
   const c = $('titleCv'), d = Math.min(2, window.devicePixelRatio || 1);
   if (c.width !== 160 * d) { c.width = 160 * d; c.height = 170 * d; }
   const g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height);
-  const t = now / 1000, i = Math.floor(t / 2.4) % TB.length, ph = (t % 0.8) / 0.8, T = TB[i], D = T.D;
+  const t = now / 1000, cyc = Math.floor(t / 2.4), pool = TB.concat(tbMine), ph = (t % 0.8) / 0.8;
+  if (cyc !== tbCycle) { tbCycle = cyc; const n = pool.length; let j = Math.floor(Math.random() * n); if (n > 1 && j === tbCur) j = (j + 1) % n; tbCur = j; }   // 2.4秒ごとに、前と違うキャラをランダムに
+  const T = pool[Math.min(tbCur, pool.length - 1)], D = T.D;
   if (ph < (T.ph ?? 1)) { D.sq.p = -0.4; D.wob.v += 4; D.sq.v = 0; } T.ph = ph;
   if (ph > 0.12 && !T.up) { D.sq.v += 6; T.up = true; } if (ph < 0.12) T.up = false;
   spring(D.sq, 0, 1 / 60); spring(D.wob, 0, 1 / 60, 200, 5); D.sq.p = clamp(D.sq.p, -0.4, 0.3);
