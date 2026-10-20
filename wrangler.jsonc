@@ -1,8 +1,14 @@
 // Cloudflare Workers の設定（GitHub から自動で公開されるときに使われる）
-// サーバーの処理はなく、index.html・og.png・icon.png をそのまま配信するだけ（.assetsignore に書いたもの以外は配信しない）
+// worker.js：ランキングの API（/api/rank）と管理ページ（/admin）。それ以外は index.html・og.png・icon.png をそのまま配信する（.assetsignore に書いたもの以外は配信しない）
 {
-  // ↓ Cloudflare のダッシュボードで付ける名前と同じにする（URL は https://この名前.〇〇.workers.dev になる）
+  // ↓ Cloudflare のダッシュボードで付けた Worker の名前と同じにする
   "name": "oekaki-jump",
+  "main": "worker.js",
   "compatibility_date": "2025-09-01",
-  "assets": { "directory": "." }
+  "assets": { "directory": ".", "binding": "ASSETS" },
+  // ランキングの保存先（Durable Object。無料プランで使える SQLite 版）。ダッシュボードでの作成は不要
+  "durable_objects": {
+    "bindings": [{ "name": "BOARD", "class_name": "Board" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Board"] }]
 }

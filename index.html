@@ -145,6 +145,20 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 .rec span,.zk span{flex:1}
 .rec em,.zk em{font-style:normal;font-size:17px;font-weight:900}
 .zk.no{opacity:.35}
+/* ランキング：登録欄（終わりの画面）と、記録の画面のタブ */
+#rkBox{display:none;flex-direction:column;align-items:center;gap:6px;width:min(300px,86vw)}
+#rkBox.on{display:flex}
+#rkRow{display:flex;gap:8px;width:100%}
+#rkName{flex:1;min-width:0;font-family:inherit;font-size:16px;font-weight:800;color:var(--ink);border:2px solid rgba(29,36,64,.15);border-radius:999px;padding:9px 14px;background:#fff;-webkit-user-select:text;user-select:text;outline:none}
+#rkName:focus{border-color:var(--acc)}
+#rkGo{padding:9px 16px;font-size:14px;white-space:nowrap}
+#rkMsg{margin:0;font-size:13px;font-weight:800;color:var(--sub);min-height:1em;text-align:center}
+#rkMsg b{color:var(--acc)}
+.tabs{display:flex;gap:6px;background:rgba(255,255,255,.1);padding:4px;border-radius:999px}
+.tabs button{padding:7px 14px;font-size:13px;background:none;color:#fff;box-shadow:none}
+.tabs button.on{background:#fff;color:var(--ink)}
+.rec.me{outline:2px solid var(--acc2)}
+.rec .nm{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* 図鑑：1画面に収まる小さなマス */
 #zukan{justify-content:center;gap:8px}
 .zkh2{margin:4px 0 -2px;font-size:12px;font-weight:900;opacity:.75;width:100%;max-width:340px}
@@ -223,6 +237,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
       <p id="best"></p>
       <div class="who"><canvas id="overCv" width="96" height="96"></canvas><span><span id="overType"></span><span id="overEff"></span></span></div>
     </div>
+    <div id="rkBox"><div id="rkRow"><input id="rkName" maxlength="8" placeholder="なまえ（かな8文字）" autocomplete="off" enterkeyhint="send"><button class="main" id="rkGo">ランキングに登録</button></div><p id="rkMsg"></p></div>
     <button class="main big" id="bRetry">リスタート</button>
     <button class="sec" id="bAgain">書き直す</button>
     <div class="icons">
@@ -239,7 +254,9 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
     <p class="cls">さわって とじる</p>
   </div>
   <div class="ov" id="recs">
-    <h3>じぶんの記録</h3>
+    <h3 id="recH">じぶんの記録</h3>
+    <div id="recCtl"><div class="tabs" id="recTabs"><button data-v="me" class="on">じぶん</button><button data-v="rk">ランキング</button></div></div>
+    <div id="rkCtl" style="display:none;flex-direction:column;align-items:center;gap:6px"><div class="tabs" id="rkModes"><button data-v="time30" class="on">30秒</button><button data-v="ta1000">1000m</button></div><div class="tabs" id="rkPers"><button data-v="day" class="on">今日</button><button data-v="all">全期間</button></div></div>
     <div id="recList"></div>
     <p class="cls">さわって とじる</p>
   </div>
@@ -258,7 +275,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 <script>
 /*SIM-START*/
 // ===== ゲームの計算部分（DOM を使わない。Node の試し遊びはここだけを読み込む）=====
-const VERSION = '0.12.1';
+const VERSION = '0.13.0';
 
 // ===== 調整用パラメータ =====
 const P = {
@@ -1256,7 +1273,7 @@ function howto(on) { $('howto').classList.toggle('on', on); }
 for (const id of ['howto', 'recs', 'zukan']) $(id).addEventListener('pointerdown', e => { e.stopPropagation(); $(id).classList.remove('on'); });
 $('qbtn').addEventListener('click', () => { chartUI(); howto(true); });
 $('bHelp').addEventListener('click', () => { chartUI(); howto(true); });
-$('bRec').addEventListener('click', () => { recsUI(); $('recs').classList.add('on'); });
+$('bRec').addEventListener('click', () => { recTab('me'); $('recs').classList.add('on'); });
 $('bZuk').addEventListener('click', () => { zukanUI(); $('zukan').classList.add('on'); });
 $('bSnd2').addEventListener('click', () => { auInit(); AU.on = !AU.on; store.set('snd', AU.on); sndLabel(); });
 $('bT30').addEventListener('click', () => { auInit(); playMode = 'time30'; goDraw(); });
@@ -1895,9 +1912,80 @@ function endGame() {
   const ckey = stats.effects.map(e => e.id).sort().join('+'); zk.combo[ckey] = Math.max(zk.combo[ckey] || 0, m);
   store.set('zk', zk);
   lastRun = run;
-  show('over');
+  show('over'); rkOverUI(); prepCard();
 }
 let lastRun = null;
+// ----- ランキング（サーバーに送るのは、なまえ・記録・形の名前・特殊効果だけ。描いた絵は送らない）-----
+const RK_NAME = /^[ぁ-ゖァ-ヺー]{1,8}$/;
+const rk = { data: null, mode: 'time30', per: 'day', tab: 'me', busy: false };
+function devId() {   // 端末番号（1人1件のため。ランダムな数字だけ）
+  let d = store.get('dev', '');
+  if (!/^[0-9a-f]{16}$/.test(d)) { const a = new Uint8Array(8); crypto.getRandomValues(a); d = [...a].map(x => x.toString(16).padStart(2, '0')).join(''); store.set('dev', d); }
+  return d;
+}
+const rkEntry = r => r.mode === 'time30' && r.m >= 1 ? r.m : r.mode === 'ta1000' && r.clear ? r.t : null;   // 登録できる記録
+function rkScore(m, s) { return m === 'ta1000' ? s.toFixed(2) + '秒' : s + 'm'; }
+function rkOverUI() {   // 終わりの画面の登録欄
+  const r = lastRun, ok = r && rkEntry(r) !== null;
+  $('rkBox').classList.toggle('on', ok);
+  if (!ok) return;
+  $('rkName').value = store.get('rk_name', ''); $('rkGo').disabled = false; $('rkGo').textContent = 'ランキングに登録'; $('rkMsg').textContent = '';
+}
+async function rkSubmit() {
+  const r = lastRun; if (!r || rk.busy) return;
+  const u = $('rkName').value.trim();
+  if (u && !RK_NAME.test(u)) { $('rkMsg').textContent = 'なまえは ひらがな・カタカナ 8文字まで'; return; }
+  store.set('rk_name', u); rk.busy = true; $('rkGo').disabled = true; $('rkMsg').textContent = '送っています…';
+  try {
+    const res = await fetch('/api/rank', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ m: r.mode, s: rkEntry(r), u, n: r.type, e: r.eff, d: devId() }) });
+    const j = await res.json();
+    if (!res.ok) throw new Error(j.error || res.status);
+    rk.data = j;
+    if (j.id) { const ids = store.get('rk_ids', []); ids.unshift(j.id); store.set('rk_ids', ids.slice(0, 50)); }
+    const pos = [j.dpos ? `今日 <b>${j.dpos}位</b>` : '', j.pos ? `全期間 <b>${j.pos}位</b>` : ''].filter(Boolean).join('　');
+    $('rkMsg').innerHTML = j.id ? '登録しました！　' + pos : pos ? 'じぶんの いちばんの記録は　' + pos : '100位に 入りませんでした';
+    $('rkGo').textContent = '登録ずみ';
+  } catch (e) {
+    $('rkMsg').textContent = String(e.message) === 'invalid' ? 'なまえを 変えてみてね' : String(e.message) === 'busy' ? '少し待ってから もう一度' : 'つながりませんでした';
+    $('rkGo').disabled = false;
+  }
+  rk.busy = false;
+}
+$('rkGo').addEventListener('click', rkSubmit);
+$('rkName').addEventListener('keydown', e => { if (e.key === 'Enter') rkSubmit(); });
+async function rkLoad() {
+  $('recList').innerHTML = '<p class="empty">よみこみ中…</p>';
+  try { const res = await fetch('/api/rank'); if (!res.ok) throw 0; rk.data = await res.json(); } catch (e) { rk.data = null; }
+  rkList();
+}
+function rkList() {
+  const box = $('recList'); box.innerHTML = '';
+  if (!rk.data || !rk.data[rk.mode]) { box.innerHTML = '<p class="empty">ランキングに つながりませんでした</p>'; return; }
+  const list = rk.data[rk.mode][rk.per], mine = new Set(store.get('rk_ids', []));
+  if (!list.length) { box.innerHTML = '<p class="empty">まだ だれも いません。一番のりしよう！</p>'; return; }
+  const effName = id => (EFFECTS.find(e => e.id === id) || {}).name || '';
+  list.forEach((e, i) => {
+    const el = document.createElement('div'); el.className = 'rec' + (mine.has(e.id) ? ' me' : '');
+    el.innerHTML = `<b></b><span><span class="nm"></span><small></small></span><em></em>`;
+    el.querySelector('b').textContent = i + 1; el.querySelector('.nm').textContent = e.u || 'ななし';
+    el.querySelector('small').textContent = e.n + '　' + e.e.map(effName).join('×'); el.querySelector('em').textContent = rkScore(rk.mode, e.s);
+    box.append(el);
+  });
+}
+function recTab(t) {
+  rk.tab = t;
+  for (const b of $('recTabs').children) b.classList.toggle('on', b.dataset.v === t);
+  $('recH').textContent = t === 'rk' ? 'ランキング' : 'じぶんの記録'; $('rkCtl').style.display = t === 'rk' ? 'flex' : 'none';
+  if (t === 'rk') rkLoad(); else recsUI();
+}
+// タブは押しても画面を閉じない
+for (const id of ['recCtl', 'rkCtl']) $(id).addEventListener('pointerdown', e => e.stopPropagation());
+$('recTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) recTab(b.dataset.v); });
+for (const [id, key] of [['rkModes', 'mode'], ['rkPers', 'per']]) $(id).addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return; rk[key] = b.dataset.v;
+  for (const x of $(id).children) x.classList.toggle('on', x === b); rkList();
+});
 function titleInfo() {
   const a = store.get('best_time30', 0), t = store.get('best_ta1000', 0), parts = [];
   if (a) parts.push(`30秒 ${a}m`); if (t) parts.push(`1000m ${t.toFixed(2)}秒`);
@@ -1963,19 +2051,25 @@ function buildCard() {
 }
 function shareText() {
   const r = lastRun, head = r.mode === 'ta1000' && r.clear ? `1000mを ${r.t.toFixed(2)}秒！` : r.mode === 'time30' ? `30秒で ${r.m}m！` : `${r.m}m！`;
-  return `おえかきジャンプ ${head} 称号「${r.rank}」\n${r.type}　${r.effLine}\n#おえかきジャンプ`;
+  return `おえかきジャンプ ${head} 称号「${r.rank}」\n${r.type}　${r.effLine}\n#おえかきジャンプ\n${SITE_URL}`;
 }
-function saveCard() {
-  const c = buildCard();
-  c.toBlob(async blob => {
-    const file = new File([blob], 'oekaki-jump.png', { type: 'image/png' });
-    try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: shareText() }); return; } } catch (e) { if (e.name === 'AbortError') return; }
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'oekaki-jump.png'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000);
-    toast('画像を保存しました');
-  }, 'image/png');
+function saveCard() {   // スマホは共有の画面から「画像を保存」、PC はそのまま保存
+  if (!cardFile) { toast('画像を作っています…'); return; }
+  if (matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files: [cardFile] })) { navigator.share({ files: [cardFile] }).catch(() => { }); return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(cardFile); a.download = 'oekaki-jump.png'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  toast('画像を保存しました');
 }
-async function shareRun() {
-  try { if (navigator.share) { await navigator.share({ text: shareText() }); return; } } catch (e) { if (e.name === 'AbortError') return; }
+const SITE_URL = 'https://oekaki-jump.watasuru.com/';
+let cardFile = null;   // 終わりの画面を出したときに作っておく共有用の画像（押してから作ると、スマホで共有が止められることがある）
+function prepCard() { cardFile = null; buildCard().toBlob(b => { cardFile = new File([b], 'oekaki-jump.png', { type: 'image/png' }); }, 'image/png'); }
+function shareRun() {   // 描いたキャラ入りの画像と文章を、端末の共有でそのまま渡す（X を選ぶ）。画像はどこにも送らない
+  const touch = matchMedia('(pointer: coarse)').matches;
+  if (touch && cardFile && navigator.canShare && navigator.canShare({ files: [cardFile] })) {
+    navigator.share({ files: [cardFile], text: shareText() }).catch(e => { if (e.name !== 'AbortError') window.open('https://x.com/intent/post?text=' + encodeURIComponent(shareText()), '_blank', 'noopener'); });
+    return;
+  }
+  // 画像つきで渡せない端末（PC など）：画像を保存してから、X の投稿画面を開く（画像は投稿画面に貼る）
+  if (cardFile) { const a = document.createElement('a'); a.href = URL.createObjectURL(cardFile); a.download = 'oekaki-jump.png'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); toast('画像を保存しました。投稿に そえてね'); }
   window.open('https://x.com/intent/post?text=' + encodeURIComponent(shareText()), '_blank', 'noopener');
 }
 // タイトルで見本のキャラが跳ねる
