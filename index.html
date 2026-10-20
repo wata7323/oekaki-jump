@@ -248,7 +248,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 <script>
 /*SIM-START*/
 // ===== ゲームの計算部分（DOM を使わない。Node の試し遊びはここだけを読み込む）=====
-const VERSION = '0.10.0';
+const VERSION = '0.11.0';
 
 // ===== 調整用パラメータ =====
 const P = {
@@ -310,8 +310,8 @@ const P = {
   moveFromRow: 25, moveRampRows: 120, moveMax: 0.45, moveAx: 70, moveAyGap: 0.3, movePeriod0: 2.2, movePeriod1: 3.6,
   // 1000m から：トゲ床（乗るとアウト）と敵（触るとアウト）。hazardRampM かけて増える
   // モード：timeLimit 秒（30秒アタック）、goalM（タイムアタックのゴール）、モード中の障害物の出はじめと増え方
-  timeLimit: 30, goalM: 1000, modeHazardFromM: 300, modeHazardRampM: 1500,
-  hazardFromM: 1000, hazardRampM: 3000, spikeRate0: 0.25, spikeRate1: 0.55, enemyRate0: 0.06, enemyRate1: 0.25,
+  timeLimit: 30, goalM: 1000, modeHazardFromM: 150, modeHazardRampM: 1000,
+  hazardFromM: 500, hazardRampM: 2000, spikeRate0: 0.25, spikeRate1: 0.55, enemyRate0: 0.06, enemyRate1: 0.25,
   enemyR: 11, enemyHit: 0.75, enemyAx0: 40, enemyAx1: 100,
   pillarW: 16, pillarRoom: 100,
   panelEvery: 6, panelRows: 3.2, panelEveryWall: 6, panelRowsWall: 3.5, panelW: 12, catchRows: 6, catchW: 64,   // 左右の端に、ひっつける壁を数段ぶん向かい合わせで置く（壁の形の近道）
@@ -794,11 +794,26 @@ function genRow(C) {
 }
 
 // ===== 遊びの進行 =====
-function newGame(stats, seed, mode = 'endless') {
+// チュートリアルのコース：0 まる（基本）、1 かぎ（スイング）、2 しかく（カベけり）。てっぺんの旗がゴール
+const TUT_COURSES = [
+  { plats: [[110, 250, -110], [20, 140, -230], [200, 330, -350], [90, 230, -470], [210, 340, -590], [40, 170, -710]], goal: [120, 240, -830] },
+  { plats: [[130, 230, -150], [250, 350, -380], [10, 110, -610], [140, 240, -840]], goal: [130, 230, -1040] },
+  { plats: [[150, 210, -330], [150, 210, -650]], goal: [12, 348, -1000], walls: [-960, -60] },
+];
+function makeTutCourse(i) {
+  const T = TUT_COURSES[i], C = { plats: [], blocks: [], anchors: [], movers: [], enemies: [], prevRow: [], colLast: [0, 0, 0], lastY: -1e9, lastCx: P.W / 2, row: 0, pillar: null, rng: () => 0.5, wallShape: false, hazardFrom: 1e9, hazardRamp: 1 };
+  C.plats.push({ x1: 0, x2: P.W, y: 0, anc: [] });
+  if (T.walls) C.blocks.push({ x1: 0, x2: P.panelW, y1: T.walls[0], y2: T.walls[1], panel: true }, { x1: P.W - P.panelW, x2: P.W, y1: T.walls[0], y2: T.walls[1], panel: true });
+  for (const [x1, x2, y] of T.plats) addPlat(C, x1, x2, y);
+  const g = addPlat(C, T.goal[0], T.goal[1], T.goal[2]); g.goal = true;
+  return C;
+}
+function newGame(stats, seed, mode = 'endless', tutCourse = -1) {
   const ab = derive(stats), rng = mulberry32(seed >>> 0);
   const timed = mode === 'time30' || mode === 'ta1000';
-  const G = { ab, stats, mode, t: 0, course: timed ? makeCourse(rng, ab.wallOk, P.modeHazardFromM, P.modeHazardRampM) : makeCourse(rng, ab.wallOk),
-    tideY: timed ? 1e9 : P.tideStart, bestY: 0, over: false, clear: false, ev: [], buf: null };
+  const tutor = tutCourse >= 0;
+  const G = { ab, stats, mode, t: 0, course: tutor ? makeTutCourse(tutCourse) : timed ? makeCourse(rng, ab.wallOk, P.modeHazardFromM, P.modeHazardRampM) : makeCourse(rng, ab.wallOk),
+    tideY: timed || tutor ? 1e9 : P.tideStart, bestY: 0, over: false, clear: false, ev: [], buf: null, hold: tutor };
   G.pl = { x: P.W / 2, y: 0, vx: 0, vy: 0, hw: ab.w / 2, h: ab.h, st: 'ground', landT: 0, lastGroundT: -9, bounceT: -9,
     combo: 0, chain: 0, fever: 0, airLeft: ab.airJumps, jumpY: 0, bounceV: 0, wallSide: 0, wallHops: 0, hang: null, grabCd: 0, face: 1 };
   courseEnsure(G.course, -1600);
@@ -842,7 +857,7 @@ function step(G, dt) {
   // モードの終わり方：30秒で時間切れ／1000mでゴール（どちらも迫る色はない）
   if (G.mode === 'time30' && G.t >= P.timeLimit) { G.over = true; G.ev.push({ k: 'over', why: 'time' }); return; }
   if (G.mode === 'ta1000' && -G.bestY / P.unitPerM >= P.goalM) { G.over = true; G.clear = true; G.ev.push({ k: 'over', why: 'goal' }); return; }
-  if (G.mode === 'time30' || G.mode === 'ta1000') G.hold = true;
+  if (G.mode === 'time30' || G.mode === 'ta1000' || G.mode === 'tut') G.hold = true;
   if (!G.hold) {   // チュートリアル中は止めておく
     G.tideT = (G.tideT || 0) + dt;
     const tv = Math.min(P.tideVMax, P.tideV0 + P.tideAcc * G.tideT);
@@ -1062,6 +1077,7 @@ function magnet(G, dt) {
 function land(G, s, v, mb = 0) {
   const pl = G.pl, ab = G.ab, A = P.ab;
   pl.gliding = false;
+  if (s.goal && !G.over) { G.over = true; G.clear = true; G.ev.push({ k: 'over', why: 'goal' }); }   // チュートリアルの旗
   if (s.hazard) { pl.y = s.y + mb; pl.vy = 0; G.over = true; G.ev.push({ k: 'over', why: 'spike' }); return; }   // トゲ床に乗ったらアウト
   if (P.comboFallBreak && s.y > pl.jumpY - P.comboRise) { pl.combo = 0; pl.chain = 0; pl.fever = 0; pl.flowN = 0; }   // 跳んだ所より上に乗れなければコンボ・ポヨンは切れる   // 跳んだ所より下に降りたらコンボ・ポヨンは切れる
   if (v > A.bounceMinV && v * ab.bounce > A.bounceStopV) {
@@ -1235,7 +1251,7 @@ $('bZuk').addEventListener('click', () => { zukanUI(); $('zukan').classList.add(
 $('bSnd2').addEventListener('click', () => { auInit(); AU.on = !AU.on; store.set('snd', AU.on); sndLabel(); });
 $('bT30').addEventListener('click', () => { auInit(); playMode = 'time30'; goDraw(); });
 $('bTA').addEventListener('click', () => { auInit(); playMode = 'ta1000'; goDraw(); });
-$('bTut').addEventListener('click', () => { auInit(); playMode = 'tutorial'; goDraw(); });
+$('bTut').addEventListener('click', () => { auInit(); startTutorial(); });
 $('bHome').addEventListener('click', () => show('title'));
 function goDraw() {
   strokes = []; undoStack.length = 0; stats = null; body = null; G = null;
@@ -1554,7 +1570,7 @@ function handleEvents() {
     else if (e.k === 'stick') { SFX.stick(); D.side = e.side; D.press.p = 1.15; D.press.v = 0; D.wob.v += 3; }
     else if (e.k === 'stab') { SFX.stab(); D.side = e.side || 1; D.quiver = 1; D.press.p = e.ceil ? 0 : 0.4; if (e.ceil) { D.sq.p = 0.3; } }
     else if (e.k === 'hook') { SFX.hook(); D.sq.p = 0.35; D.bend.v -= e.w * 3; }
-    else if (e.k === 'over') { SFX.over(); overT = 0.7; }
+    else if (e.k === 'over') { if (e.why === 'goal') SFX.ok(); else SFX.over(); overT = 0.7; }
   }
   G.ev.length = 0;
 }
@@ -1608,6 +1624,10 @@ function render(dt) {
     }
     cx.fillStyle = COL.plat; cx.fillRect(p.x1, p.y, w, h);
     cx.fillStyle = p.mv ? COL.move : COL.plat2; cx.fillRect(p.x1, p.y, w, 3.5);
+    if (p.goal) {   // チュートリアルの旗
+      const fx = (p.x1 + p.x2) / 2; cx.fillStyle = COL.ink; cx.fillRect(fx - 1.5, p.y - 46, 3, 46);
+      cx.fillStyle = COL.acc; cx.beginPath(); cx.moveTo(fx + 1.5, p.y - 46); cx.lineTo(fx + 28, p.y - 38); cx.lineTo(fx + 1.5, p.y - 30); cx.fill();
+    }
     if (p.mv) {   // 動く向きの印
       cx.fillStyle = COL.move; cx.font = '900 9px ' + UIF; cx.textAlign = 'center'; cx.textBaseline = 'middle';
       cx.fillText(p.mv.kind === 'h' ? '◀ ▶' : '▲▼', (p.x1 + p.x2) / 2, p.y + 6.5); cx.textAlign = 'left';
@@ -1703,6 +1723,14 @@ function render(dt) {
   if (G.mode === 'time30') { const left = Math.max(0, P.timeLimit - G.t); tm.textContent = left.toFixed(1); tm.classList.toggle('hurry', left < 5); }
   else if (G.mode === 'ta1000') { tm.textContent = G.t.toFixed(2); tm.classList.remove('hurry'); }
   else tm.textContent = '';
+  // 大ジャンプの段階：頭の上に小さな点2つ（たまると黄色、大ジャンプの瞬間はピンク）
+  if (G.ab.bigAt === 2 && pl.st !== 'hang') {
+    const by = pl.y - pl.h - 10;
+    for (let i = 0; i < 2; i++) {
+      const on = rs.bigT > 0 || i < pl.combo; cx.beginPath(); cx.arc(pl.x - 5 + i * 10, by, 3.5, 0, 7);
+      cx.fillStyle = rs.bigT > 0 ? COL.acc : on ? COL.acc2 : 'rgba(255,255,255,.7)'; cx.fill(); cx.lineWidth = 1.5; cx.strokeStyle = COL.ink; cx.stroke();
+    }
+  }
   // 土煙の粒
   for (const q of rs.parts) { q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 300 * dt; const a = 1 - q.t / q.life; if (a <= 0) continue; cx.globalAlpha = a * 0.85; cx.fillStyle = q.col; cx.beginPath(); cx.arc(q.x, q.y, q.r * (0.6 + a * 0.4), 0, 7); cx.fill(); }
   cx.globalAlpha = 1; rs.parts = rs.parts.filter(q => q.t < q.life);
@@ -1738,9 +1766,7 @@ function render(dt) {
   const m = Math.floor(-G.bestY / P.unitPerM);
   $('hgt').firstChild.nodeValue = m;
   const ri = rankIndex(m); if (ri > rs.rankIdx) { rs.rankIdx = ri; pop(RANKS[ri][1] + '！', COL.move, 18); }
-  const dots = $('cmb').children;
-  $('cmb').style.display = G.ab.bigAt === 2 ? 'flex' : 'none';
-  for (let i = 0; i < 3; i++) { dots[i].style.display = i < 2 ? '' : 'none'; dots[i].className = rs.bigT > 0 ? 'big' : i < pl.combo ? 'f' : ''; }
+  $('cmb').style.display = 'none';
   rs.bigT -= dt;
 }
 
@@ -1814,6 +1840,7 @@ const taRank = t => TA_RANKS.find(([s]) => t <= s)[1];
 const MODE_NAME = { time30: '30秒アタック', ta1000: '1000mタイムアタック', normal: 'エンドレス', tutorial: 'エンドレス' };
 function endGame() {
   aim = null;
+  if (G.mode === 'tut') { if (G.clear && tut) { tutGoal(); return; } tut = null; $('tut').classList.remove('on'); show('title'); return; }   // チュートリアルは記録に残さない
   if (tut) { $('tut').classList.remove('on'); $('tutZones').classList.remove('on'); tut = null; }
   const mode = G.mode === 'endless' ? 'normal' : G.mode, m = Math.floor(-G.bestY / P.unitPerM), t = +G.t.toFixed(2), clear = !!G.clear;
   $('why').textContent = { spike: 'トゲに のった！', enemy: 'ぶつかった！', tide: 'おいつかれた！', time: 'タイムアップ！', goal: 'ゴール！' }[rs.why] || '';
@@ -1966,42 +1993,46 @@ function chartUI() {
   }
 }
 // 遊び中のチュートリアル（初回だけ。？の表から、もう一度見られる）
-const TUT_HINT = {
-  bounce: ['弾む瞬間に はなす', e => e.k === 'jump' && e.chain >= 1], swing: ['足場の端へ 近づこう', e => e.k === 'hook'],
-  kick: ['黄色い壁へ 跳びつこう', e => e.k === 'stick'], stab: ['壁のほうを ねらうと よじ登る', e => e.k === 'stab'],
-  high: ['引いたまま 待つと ため', e => e.k === 'jump' && e.pw > 1.1], glide: ['空中で 引っぱると 滑空', null], air: ['空中で 引っぱると 止まる', e => e.k === 'jump' && e.from === 'air'],
-  big: ['2回目で 大ジャンプ！', e => e.k === 'jump' && e.big],
-};
+// チュートリアル：中心となる3つの形を順番に操作してもらう（描く画面は出さない）
+const TUT_STAGES = [
+  { strokes: () => TEMPLATES[0].strokes, eff: 'bounce', hints: [['下へ引っぱって はなす', e => e.k === 'jump', 2], ['止まらず跳ぶと 勢いが乗る', e => e.k === 'jump' && e.flow >= 2, 1], ['旗まで のぼろう', null, 0]] },
+  { strokes: () => TEMPLATES[1].strokes, eff: 'swing', hints: [['足場の端に 近づくと つかまる', e => e.k === 'hook', 1], ['揺れて はなすと 飛び出す', e => e.k === 'jump' && e.from === 'hang', 1], ['旗まで のぼろう', null, 0]] },
+  { strokes: () => [[{ x: 60, y: 60 }, { x: 240, y: 60 }, { x: 240, y: 240 }, { x: 60, y: 240 }, { x: 60, y: 60 }]], eff: 'kick', hints: [['黄色い壁に とびつこう', e => e.k === 'stick', 1], ['反対へ引っぱって キック', e => e.k === 'jump' && e.from === 'wall', 1], ['旗まで のぼろう', null, 0]] },
+];
 let tut = null;
-function tutStart() {
-  tut = { step: 0, n: 0, t: 0, list: G.ab.effects.map(e => e.id) }; G.hold = true; tutShow();
+function tutStart() { }   // （旧方式の入口。今は startTutorial を使う）
+function startTutorial() { playMode = 'tutorial'; tutStage(0); }
+function tutStage(i) {
+  const T = TUT_STAGES[i];
+  strokes = copyStrokes(T.strokes()); undoStack.length = 0;
+  const st = analyzeShape(strokes); st.effects = pickEffects(st);
+  if (!st.effects.some(e => e.id === T.eff)) st.effects = [{ id: T.eff, name: EFFECTS.find(e => e.id === T.eff).name }, st.effects[0]];   // 主役の効果は必ず入れる
+  stats = st; body = makeBody(st); stats.type = shapeName(st); stats.effLine = '特殊効果 ' + st.effects.map(e => '「' + e.name + '」').join('×');
+  G = newGame(stats, 1, 'tut', i);
+  rs = { D: newDeform(), bigT: 0, pops: [], seen: new Set(), shake: 0, lines: [], parts: [], trail: [], hitstop: 0, streak: 0, rankIdx: rankIndex(0) };
+  cam = -viewH() * 0.62; acc = 0; overT = 0; show('play'); rs.warned = true;
+  tut = { i, h: -1, n: 0, t: 0, step: -1 };
+  $('tutTxt').textContent = `${i + 1}/${TUT_STAGES.length}　${stats.type}：` + st.effects.map(e => e.name).join(' × ');
+  $('tut').classList.add('on');
 }
-function tutShow() {
-  const st = tut.step, L = tut.list;
-  $('tutZones').classList.remove('on');
-  const txt = st === 0 ? '下へ引っぱって はなす' : st === 1 ? '止まらず跳ぶと 2回目で大ジャンプ！'
-    : st - 2 < L.length ? TUT_HINT[L[st - 2]][0] : 'GO！';
-  $('tutTxt').textContent = txt; $('tut').classList.add('on'); tut.t = 0;
-}
-function tutNext() {
-  tut.step++; tut.n = 0;
-  if (tut.step === 1 && G.ab.bigAt !== 2) tut.step = 2;   // 大ジャンプを持たない形は、その説明を飛ばす
-  if (tut.step === 2) G.hold = false;   // ここから迫る色が動き出す
-  if (tut.step > tut.list.length + 2) { $('tut').classList.remove('on'); $('tutZones').classList.remove('on'); tut = null; playMode = 'normal'; return; }   // 終わったら次からは通常プレイ
-  tutShow();
+function tutHint() {
+  const H = TUT_STAGES[tut.i].hints[tut.h];
+  $('tutTxt').textContent = H[0]; $('tut').classList.add('on'); tut.n = 0; tut.t = 0; tut.step = tut.i === 0 ? tut.h : 99;
 }
 function tutEvent(e) {
-  if (!tut) return;
-  const st = tut.step;
-  if (st === 0 && e.k === 'jump' && ++tut.n >= 3) tutNext();
-  else if (st === 1 && e.k === 'jump' && e.big) tutNext();
-  else if (st >= 2 && st - 2 < tut.list.length) { const c = TUT_HINT[tut.list[st - 2]][1]; if (c && c(e)) tutNext(); }
+  if (!tut || tut.h < 0) return;
+  const H = TUT_STAGES[tut.i].hints[tut.h];
+  if (H[1] && H[1](e) && ++tut.n >= H[2] && tut.h < TUT_STAGES[tut.i].hints.length - 1) { tut.h++; tutHint(); }
 }
 function tutTick(dt) {
   if (!tut) return;
   tut.t += dt;
-  const st = tut.step;
-  if (st >= 2 && (st - 2 >= tut.list.length ? tut.t > 1.2 : tut.t > (TUT_HINT[tut.list[st - 2]][1] ? 9 : 2.5))) tutNext();
+  if (tut.h < 0 && tut.t > 1.8) { tut.h = 0; tutHint(); }   // 最初は形と効果の紹介
+}
+function tutGoal() {   // 旗に着いた：次の形へ。最後ならおわり
+  const next = tut.i + 1;
+  if (next < TUT_STAGES.length) { tutStage(next); return; }
+  tut = null; $('tut').classList.remove('on'); playMode = 'time30'; show('title'); toast('チュートリアル おわり！');
 }
 
 let last = performance.now();
@@ -2015,7 +2046,7 @@ function frame(now) {
     while (acc >= h && n < 8) { step(G, h); acc -= h; n++; }
     if (acc > h) acc = 0;
     handleEvents(); tutTick(dt); render(dt);
-    if (G.over && mode === 'play') { overT -= dt; if (overT <= 0) endGame(); }
+    if (G.over && mode === 'play') { if (G.mode === 'tut' && G.clear && overT > 0.35) overT = 0.35; overT -= dt; if (overT <= 0) endGame(); }
   } else if (mode !== 'play') {
     cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, cv.width, cv.height);
   }
