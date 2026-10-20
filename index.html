@@ -234,7 +234,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 <script>
 /*SIM-START*/
 // ===== ゲームの計算部分（DOM を使わない。Node の試し遊びはここだけを読み込む）=====
-const VERSION = '0.8.0';
+const VERSION = '0.9.0';
 
 // ===== 調整用パラメータ =====
 const P = {
@@ -242,10 +242,12 @@ const P = {
   unitPerM: 20,           // 何単位で 1m とするか
   // 描画
   boxSize: 300, brush: 16, gridN: 100,
-  // 個体差（表示しない）：重さ→重力と跳ぶ力、縦横の比→高さと横、丸さ→着地の吸い寄せ。効果の差より小さく
-  indiv: { weightG: 0.06, weightJ: 0.03, tallJ: 0.04, tallX: 0.06, roundAssist: 6 },
+  // 個体差（表示しない。特殊効果とは別の物差し）：
+  //   大きさ（描いた絵の大きさ size0〜size1 → 体 ±size）… 大きいほど足場に届きやすいが、トゲ・敵・柱に当たりやすい
+  //   テンポ（重さ → 時間の速さ ±tempo。高さと距離は同じ）… 重いほどキビキビ登れるが、空中の時間が短く狙う余裕が減る
+  indiv: { size: 0.1, size0: 0.35, size1: 0.9, tempo: 0.1 },
   // 体の大きさ
-  bodySize: 38, bodyGrow: 12, bodyMin: 16,
+  bodySize: 44, bodyGrow: 0, bodyMin: 16,
   // 基本の動き
   gravity: 3000, maxFall: 1700, jumpVy: 1160, jumpVx: 250, groundFriction: 22,
   // コンボ（ポンポンポーン）
@@ -594,10 +596,11 @@ function pickEffects(s) {
 function derive(s) {
   const A = P.ab, E = s.effects || pickEffects(s);
   const k = id => E.some(e => e.id === id) ? 1 : 0;
-  const I = P.indiv, wv = s.weight * 2 - 1, tv = clamp(s.tall, -1, 1);   // 個体差：-1〜1
+  const I = P.indiv, ext = Math.max(s.bbox.w, s.bbox.h) / P.boxSize;
+  const sv = clamp01((ext - I.size0) / (I.size1 - I.size0)) * 2 - 1, tk = 1 + I.tempo * (s.weight * 2 - 1);   // 個体差：大きさ -1〜1、テンポの倍率
   const round = k('bounce'), hook = k('swing'), flat = k('kick'), spike = k('stab');
   const high = k('high'), glide = k('glide'), air = k('air'), big = k('big');
-  const size = P.bodySize + P.bodyGrow * s.weight;
+  const size = P.bodySize * (1 + I.size * sv);
   const sc = size / Math.max(s.bbox.w, s.bbox.h);
   const hold = clamp01(flat * A.flatHold + spike * A.spikeHold);
   const stab = spike > 0;
@@ -605,16 +608,16 @@ function derive(s) {
     effects: E, hook, flat, round, spike,
     w: Math.max(4, s.bbox.w * sc), h: Math.max(4, s.bbox.h * sc),
     shapes: (() => { const M = s.mask || { w: 1, h: 1, d: new Uint8Array([1]) }, W = Math.max(4, s.bbox.w * sc), H = Math.max(4, s.bbox.h * sc); return [bodyShape(M, W, H, false), bodyShape(M, W, H, true)]; })(),
-    g: P.gravity * (1 + I.weightG * wv),
+    g: P.gravity * tk * tk,   // 時間の速さを tk 倍に（重力は二乗、速さは一乗で、高さと距離は変わらない）
     glide: 1 - A.glideG * glide,
     glideUp: 1 - A.glideUpG * glide,
-    assist: P.landAssist + A.glideAssist * glide + I.roundAssist * s.round,
+    assist: P.landAssist + A.glideAssist * glide,
     magnet: P.magnetRange * (1 + A.glideMagnet * glide),
     steer: glide > 0,
     bigSteer: big > 0,   // 早ポーン：大ジャンプ中は足場へ引き寄せる
-    maxFall: P.maxFall * (1 - A.glideFall * glide),
-    jvy: P.jumpVy * (1 + A.highVy * high) * (1 - I.weightJ * wv) * (1 + I.tallJ * tv),
-    jvx: P.jumpVx * (1 - A.highVx * high) * (1 - I.tallX * tv),
+    maxFall: P.maxFall * (1 - A.glideFall * glide) * tk,
+    jvy: P.jumpVy * (1 + A.highVy * high) * tk,
+    jvx: P.jumpVx * (1 - A.highVx * high) * tk,
     bigAt: big > 0 ? 2 : Infinity,   // 大ジャンプ：2回目で大ジャンプ（この効果だけの特権）
     bigMul: big > 0 ? P.bigJumpMul + A.bigPlus - A.bigLess * (1 - big) : P.bigJumpMul,
     feverStep: P.feverStep,
