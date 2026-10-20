@@ -258,7 +258,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 <script>
 /*SIM-START*/
 // ===== ゲームの計算部分（DOM を使わない。Node の試し遊びはここだけを読み込む）=====
-const VERSION = '0.12.0';
+const VERSION = '0.12.1';
 
 // ===== 調整用パラメータ =====
 const P = {
@@ -2017,9 +2017,9 @@ function chartUI() {
 // 遊び中のチュートリアル（初回だけ。？の表から、もう一度見られる）
 // チュートリアル：中心となる3つの形を順番に。描く画面には形を描いておき、押せるのは「決定」「のぼる！」だけ
 const TUT_STAGES = [
-  { strokes: () => TEMPLATES[0].strokes, eff: 'bounce', hints: [['下へ引っぱって はなす', e => e.k === 'jump', 2], ['止まらず跳ぶと 勢いが乗る', e => e.k === 'jump' && e.flow >= 2, 1], ['旗まで のぼろう', null, 0]] },
-  { strokes: () => TEMPLATES[1].strokes, eff: 'swing', hints: [['足場の端に 近づくと つかまる', e => e.k === 'hook', 1], ['揺れて はなすと 飛び出す', e => e.k === 'jump' && e.from === 'hang', 1], ['旗まで のぼろう', null, 0]] },
-  { strokes: () => [[{ x: 60, y: 60 }, { x: 240, y: 60 }, { x: 240, y: 240 }, { x: 60, y: 240 }, { x: 60, y: 60 }]], eff: 'kick', hints: [['黄色い壁に とびつこう', e => e.k === 'stick', 1], ['反対へ引っぱって キック', e => e.k === 'jump' && e.from === 'wall', 1], ['旗まで のぼろう', null, 0]] },
+  { strokes: () => TEMPLATES[0].strokes, eff: 'bounce', use: e => e.k === 'jump' && e.chain > 0, hints: [['下へ引っぱって はなす', e => e.k === 'jump', 2], ['止まらず跳ぶと 勢いが乗る', e => e.k === 'jump' && e.flow >= 2, 1], ['旗まで のぼろう', null, 0]] },
+  { strokes: () => TEMPLATES[1].strokes, eff: 'swing', use: e => e.k === 'jump' && e.from === 'hang', hints: [['足場の端に 近づくと つかまる', e => e.k === 'hook', 1], ['揺れて はなすと 飛び出す', e => e.k === 'jump' && e.from === 'hang', 1], ['旗まで のぼろう', null, 0]] },
+  { strokes: () => [[{ x: 60, y: 60 }, { x: 240, y: 60 }, { x: 240, y: 240 }, { x: 60, y: 240 }, { x: 60, y: 60 }]], eff: 'kick', use: e => e.k === 'jump' && e.from === 'wall', hints: [['黄色い壁に とびつこう', e => e.k === 'stick', 1], ['反対へ引っぱって キック', e => e.k === 'jump' && e.from === 'wall', 1], ['旗まで のぼろう', null, 0]] },
 ];
 let tut = null;
 function tutStart() { }   // （旧方式の入口。今は startTutorial を使う）
@@ -2045,14 +2045,15 @@ function tutStage(i) {   // 描く画面を、形を描いた状態で見せる
   ghostOff(); $('coach').textContent = `${i + 1}/${TUT_STAGES.length}　この形で のぼってみよう`; $('coach').classList.add('on');
   padDraw(); show('draw'); tutFocus('bOk');
 }
-function tutPlay() {   // のぼる！：チュートリアル用のコースへ
+function tutPlay(retry) {   // のぼる！：チュートリアル用のコースへ。retry：主役の効果を使わずに旗に着いたので、やり直し
   const i = tutI, st = stats;
   tutFocus(null);
   G = newGame(stats, 1, 'tut', i);
   rs = { D: newDeform(), bigT: 0, pops: [], seen: new Set(), shake: 0, lines: [], parts: [], trail: [], hitstop: 0, streak: 0, rankIdx: rankIndex(0) };
   cam = -viewH() * 0.62; acc = 0; overT = 0; show('play'); rs.warned = true;
-  tut = { i, h: -1, n: 0, t: 0, step: -1 };
-  $('tutTxt').textContent = `${i + 1}/${TUT_STAGES.length}　${stats.type}：` + st.effects.map(e => e.name).join(' × ');
+  tut = { i, h: -1, n: 0, t: 0, step: -1, used: 0 };   // used：主役の効果を使った回数
+  const eff = EFFECTS.find(e => e.id === TUT_STAGES[i].eff).name;
+  $('tutTxt').textContent = retry ? `「${eff}」を 使ってから 旗へ！` : `${i + 1}/${TUT_STAGES.length}　${stats.type}：` + st.effects.map(e => e.name).join(' × ');
   $('tut').classList.add('on');
 }
 function tutHint() {
@@ -2060,6 +2061,7 @@ function tutHint() {
   $('tutTxt').textContent = H[0]; $('tut').classList.add('on'); tut.n = 0; tut.t = 0; tut.step = tut.i === 0 ? tut.h : 99;
 }
 function tutEvent(e) {
+  if (tut && TUT_STAGES[tut.i].use(e)) tut.used++;
   if (!tut || tut.h < 0) return;
   const H = TUT_STAGES[tut.i].hints[tut.h];
   if (H[1] && H[1](e) && ++tut.n >= H[2] && tut.h < TUT_STAGES[tut.i].hints.length - 1) { tut.h++; tutHint(); }
@@ -2067,9 +2069,10 @@ function tutEvent(e) {
 function tutTick(dt) {
   if (!tut) return;
   tut.t += dt;
-  if (tut.h < 0 && tut.t > 1.8) { tut.h = 0; tutHint(); }   // 最初は形と効果の紹介
+  if (tut.h < 0 && tut.t > 1.8) { tut.h = 0; tutHint(); }   // 最初は形と効果の紹介（やり直しのときは、そのわけ）   // 最初は形と効果の紹介
 }
-function tutGoal() {   // 旗に着いた：次の形へ。最後ならおわり
+function tutGoal() {   // 旗に着いた：次の形へ。最後ならおわり。主役の効果を一度も使っていなければ、同じコースをやり直し
+  if (!tut.used) { tutPlay(true); return; }
   const next = tut.i + 1;
   if (next < TUT_STAGES.length) { tutStage(next); return; }
   tut = null; tutI = -1; tutLock(false); $('tut').classList.remove('on'); playMode = 'time30'; show('title'); toast('チュートリアル おわり！');
