@@ -30,6 +30,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#bfe8ff;color:var(--in
 button{font-family:inherit;font-size:16px;font-weight:800;letter-spacing:.05em;color:var(--ink);background:#fff;border:none;border-radius:999px;padding:12px 24px;cursor:pointer;touch-action:manipulation;box-shadow:var(--sh)}
 button:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(29,36,64,.22)}
 button.main{background:var(--acc);color:#fff;box-shadow:0 4px 0 #b8255c}
+button.main.alt{background:var(--mint);box-shadow:0 4px 0 #17917c}
 button.big{font-size:20px;padding:15px 0;width:min(260px,72vw)}
 button.sec{background:rgba(255,255,255,.85);width:min(260px,72vw)}
 button.on{background:var(--ink);color:#fff}
@@ -85,6 +86,8 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 #hud.on{display:block}
 #hgt{position:absolute;left:14px;top:8px;font-size:38px;font-weight:900;color:#fff;text-shadow:0 3px 0 var(--ink);font-variant-numeric:tabular-nums}
 #hgt small{font-size:16px;margin-left:2px}
+#timer{position:absolute;left:0;right:0;top:64px;text-align:center;font-size:30px;font-weight:900;color:#fff;text-shadow:0 3px 0 var(--ink);font-variant-numeric:tabular-nums}
+#timer.hurry{color:var(--acc2)}
 #cmb{position:absolute;left:16px;top:58px;display:flex;gap:6px}
 #cmb i{width:14px;height:14px;border:2.5px solid #fff;border-radius:50%;display:block;box-shadow:0 2px 0 var(--ink)}
 #cmb i.f{background:var(--acc2)}
@@ -120,6 +123,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 .ov .sub2{margin:-6px 0 0;font-size:13px;opacity:.8;font-weight:700}
 #chart,#recList,#zukList{display:grid;gap:8px;width:100%;max-width:340px}
 #chart{grid-template-columns:1fr 1fr}
+#recList .zkh{margin:8px 0 0}
 #chart div,.rec,.zk{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);padding:7px 9px;border-radius:14px;font-size:13px;font-weight:800}
 #chart canvas,.rec canvas,.zk canvas{width:40px;height:40px;background:#fff;border-radius:10px;flex:none}
 #chart small,.rec small,.zk small{display:block;font-size:11px;opacity:.7;font-weight:700}
@@ -142,7 +146,8 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
     <canvas id="titleCv"></canvas>
     <p class="tbest" id="tBest"></p>
     <div class="col">
-      <button class="main big" id="bPlay">あそぶ</button>
+      <button class="main big" id="bT30">30秒アタック</button>
+      <button class="main big alt" id="bTA">1000m タイムアタック</button>
       <button class="sec" id="bTut">チュートリアル</button>
     </div>
     <div class="icons">
@@ -178,6 +183,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
   <div id="tut"><p id="tutTxt"></p></div>
   <div id="hud">
     <div id="hgt">0<small>m</small></div>
+    <div id="timer"></div>
     <div id="cmb"><i></i><i></i><i></i></div>
     <div id="hbtn"><button class="ic sm" id="bSnd"><span class="i-snd"></span></button><button class="ic sm" id="bQuit"><span class="i-x"></span></button></div>
   </div>
@@ -224,7 +230,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 <script>
 /*SIM-START*/
 // ===== ゲームの計算部分（DOM を使わない。Node の試し遊びはここだけを読み込む）=====
-const VERSION = '0.5.0';
+const VERSION = '0.6.0';
 
 // ===== 調整用パラメータ =====
 const P = {
@@ -242,7 +248,7 @@ const P = {
   feverStep: 0.10, feverMax: 3,   // 止まらず跳び続けると、大ジャンプが 1回ごとに +10%（最大3回ぶん）
   // 引っ張り操作：hMax 横の伸び（全力・真横寄りのとき jumpVx の何倍）、minUp 上向きの最低量、vyAngle 斜めでも上昇を保つ割合
   pull: { hMax: 2.0, minUp: 0.35, minUpAir: 0.2, vyAngle: 0.5, wallInto: 0.25, wallOut: 0.45, kickH: 0.7, capV: 2300,
-    minLen: 14, maxLen: 120, minPow: 0.5 },   // 画面上の引っ張り距離（px）→ 強さ：minLen 未満は無効、maxLen で最大、最低でも minPow
+    minLen: 10, maxLen: 70, minPow: 0.55 },   // 画面上の引っ張り距離（px）→ 強さ：minLen 未満は無効、maxLen で最大、最低でも minPow
   // ストレスを減らす補正
   bufferTime: 0.16, coyoteTime: 0.09, landAssist: 12,
   magnetRange: 130, magnetPull: 1300,   // 下降中、真下に足場があれば横の勢いを弱めて乗せる（上限 単位/秒²）
@@ -281,6 +287,8 @@ const P = {
   // 動く足場（moveFromRow 段目から出はじめ、moveRampRows 段かけて moveMax の割合まで増える）
   moveFromRow: 25, moveRampRows: 120, moveMax: 0.45, moveAx: 70, moveAyGap: 0.3, movePeriod0: 2.2, movePeriod1: 3.6,
   // 1000m から：トゲ床（乗るとアウト）と敵（触るとアウト）。hazardRampM かけて増える
+  // モード：timeLimit 秒（30秒アタック）、goalM（タイムアタックのゴール）、モード中の障害物の出はじめと増え方
+  timeLimit: 30, goalM: 1000, modeHazardFromM: 300, modeHazardRampM: 1500,
   hazardFromM: 1000, hazardRampM: 3000, spikeRate0: 0.25, spikeRate1: 0.55, enemyRate0: 0.06, enemyRate1: 0.25,
   enemyR: 11, enemyHit: 0.75, enemyAx0: 40, enemyAx1: 100,
   pillarW: 16, pillarRoom: 100,
@@ -626,8 +634,8 @@ function derive(s) {
 }
 
 // ===== コース（上へ無限に自動生成）=====
-function makeCourse(rng, wallShape) {
-  const C = { plats: [], blocks: [], anchors: [], movers: [], enemies: [], prevRow: [], colLast: [0, 0, 0], lastY: 0, lastCx: P.W / 2, row: 0, pillar: null, rng, wallShape: !!wallShape };
+function makeCourse(rng, wallShape, hazardFrom = P.hazardFromM, hazardRamp = P.hazardRampM) {
+  const C = { plats: [], blocks: [], anchors: [], movers: [], enemies: [], prevRow: [], colLast: [0, 0, 0], lastY: 0, lastCx: P.W / 2, row: 0, pillar: null, rng, wallShape: !!wallShape, hazardFrom, hazardRamp };
   C.plats.push({ x1: 0, x2: P.W, y: 0 });
   return C;
 }
@@ -710,7 +718,7 @@ function genRow(C) {
     C.movers.push(p);
   }
   // 1000m から：触るとアウトのトゲ床と敵
-  const hz = -y / P.unitPerM >= P.hazardFromM ? clamp01((-y / P.unitPerM - P.hazardFromM) / P.hazardRampM) : -1;
+  const hz = -y / P.unitPerM >= C.hazardFrom ? clamp01((-y / P.unitPerM - C.hazardFrom) / C.hazardRamp) : -1;
   if (hz >= 0 && r() < P.spikeRate0 + (P.spikeRate1 - P.spikeRate0) * hz) {
     const w2 = lerp(P.platWMin, P.platWMax, r());
     for (let t = 0; t < 4; t++) {
@@ -758,9 +766,11 @@ function genRow(C) {
 }
 
 // ===== 遊びの進行 =====
-function newGame(stats, seed) {
+function newGame(stats, seed, mode = 'endless') {
   const ab = derive(stats), rng = mulberry32(seed >>> 0);
-  const G = { ab, stats, t: 0, course: makeCourse(rng, ab.wallOk), tideY: P.tideStart, bestY: 0, over: false, ev: [], buf: null };
+  const timed = mode === 'time30' || mode === 'ta1000';
+  const G = { ab, stats, mode, t: 0, course: timed ? makeCourse(rng, ab.wallOk, P.modeHazardFromM, P.modeHazardRampM) : makeCourse(rng, ab.wallOk),
+    tideY: timed ? 1e9 : P.tideStart, bestY: 0, over: false, clear: false, ev: [], buf: null };
   G.pl = { x: P.W / 2, y: 0, vx: 0, vy: 0, hw: ab.w / 2, h: ab.h, st: 'ground', landT: 0, lastGroundT: -9, bounceT: -9,
     combo: 0, chain: 0, fever: 0, airLeft: ab.airJumps, jumpY: 0, bounceV: 0, wallSide: 0, wallHops: 0, hang: null, grabCd: 0, face: 1 };
   courseEnsure(G.course, -1600);
@@ -793,6 +803,10 @@ function step(G, dt) {
   else if (pl.st === 'stuck') stepStuck(G, dt);
   else stepAir(G, dt);
   if (pl.st !== 'air' && pl.y < G.bestY) G.bestY = pl.y;   // 高さは着地・張り付き・ぶら下がりできた所で数える
+  // モードの終わり方：30秒で時間切れ／1000mでゴール（どちらも迫る色はない）
+  if (G.mode === 'time30' && G.t >= P.timeLimit) { G.over = true; G.ev.push({ k: 'over', why: 'time' }); return; }
+  if (G.mode === 'ta1000' && -G.bestY / P.unitPerM >= P.goalM) { G.over = true; G.clear = true; G.ev.push({ k: 'over', why: 'goal' }); return; }
+  if (G.mode === 'time30' || G.mode === 'ta1000') G.hold = true;
   if (!G.hold) {   // チュートリアル中は止めておく
     G.tideT = (G.tideT || 0) + dt;
     const tv = Math.min(P.tideVMax, P.tideV0 + P.tideAcc * G.tideT);
@@ -1160,7 +1174,8 @@ $('bHelp').addEventListener('click', () => { chartUI(); howto(true); });
 $('bRec').addEventListener('click', () => { recsUI(); $('recs').classList.add('on'); });
 $('bZuk').addEventListener('click', () => { zukanUI(); $('zukan').classList.add('on'); });
 $('bSnd2').addEventListener('click', () => { auInit(); AU.on = !AU.on; store.set('snd', AU.on); sndLabel(); });
-$('bPlay').addEventListener('click', () => { auInit(); playMode = 'normal'; goDraw(); });
+$('bT30').addEventListener('click', () => { auInit(); playMode = 'time30'; goDraw(); });
+$('bTA').addEventListener('click', () => { auInit(); playMode = 'ta1000'; goDraw(); });
 $('bTut').addEventListener('click', () => { auInit(); playMode = 'tutorial'; goDraw(); });
 $('bHome').addEventListener('click', () => show('title'));
 function goDraw() {
@@ -1372,7 +1387,7 @@ let body = null;
 let G = null, acc = 0, cam = 0, rs = null, overT = 0;
 function startPlay() {
   auInit();
-  G = newGame(stats, (Math.random() * 2 ** 32) >>> 0);
+  G = newGame(stats, (Math.random() * 2 ** 32) >>> 0, playMode === 'time30' || playMode === 'ta1000' ? playMode : 'endless');
   rs = { D: newDeform(), bigT: 0, pops: [], seen: new Set(), shake: 0, lines: [], rankIdx: rankIndex(0) };
   cam = -viewH() * 0.62; acc = 0; overT = 0; show('play'); rs.warned = false;
   if (playMode === 'tutorial') tutStart();
@@ -1564,6 +1579,19 @@ function render(dt) {
     drawBody(cx, D, sw, sh, pl.face, false, G.t);
   }
   cx.restore();
+  // タイムアタックのゴールの線
+  if (G.mode === 'ta1000') {
+    const gy = -P.goalM * P.unitPerM;
+    if (gy > cam - 20 && gy < cam + vh + 20) {
+      for (let x = 0; x < P.W; x += 12) for (let r = 0; r < 2; r++) { cx.fillStyle = (x / 12 + r) % 2 ? '#fff' : COL.ink; cx.fillRect(x, gy - 12 + r * 6, 12, 6); }
+      cx.fillStyle = COL.ink; cx.font = '900 16px sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'bottom'; cx.fillText('GOAL', P.W / 2, gy - 16); cx.textAlign = 'left';
+    }
+  }
+  // 時間（30秒は残り、タイムアタックは経過）
+  const tm = $('timer');
+  if (G.mode === 'time30') { const left = Math.max(0, P.timeLimit - G.t); tm.textContent = left.toFixed(1); tm.classList.toggle('hurry', left < 5); }
+  else if (G.mode === 'ta1000') { tm.textContent = G.t.toFixed(2); tm.classList.remove('hurry'); }
+  else tm.textContent = '';
   // 発動の文字
   cx.textAlign = 'center'; cx.textBaseline = 'middle';
   for (const p of rs.pops) {
@@ -1676,42 +1704,66 @@ function drawDragHint(pl) {
   cx.beginPath(); cx.moveTo(pl.x, pl.y - pl.h - 10); cx.lineTo(pl.x + 8 * f, pl.y - pl.h - 10 - 30 * f); cx.stroke();
   cx.globalAlpha = 1;
 }
+// タイムアタックの称号（タイムで決まる。カタカナ）
+const TA_RANKS = [[30, 'ライトニング'], [40, 'ロケット'], [50, 'スプリンター'], [70, 'ランナー'], [Infinity, 'ゴールイン']];
+const taRank = t => TA_RANKS.find(([s]) => t <= s)[1];
+const MODE_NAME = { time30: '30秒アタック', ta1000: '1000mタイムアタック', normal: 'エンドレス', tutorial: 'エンドレス' };
 function endGame() {
   aim = null;
   if (tut) { $('tut').classList.remove('on'); $('tutZones').classList.remove('on'); tut = null; }
-  $('why').textContent = { spike: 'トゲに のった！', enemy: 'ぶつかった！', tide: 'おいつかれた！' }[rs.why] || '';
-  const m = Math.floor(-G.bestY / P.unitPerM), prev = store.get('best', 0), best = Math.max(prev, m);
-  store.set('best', best);
-  $('big').firstChild.nodeValue = m; $('best').textContent = 'じぶんのさいこう ' + best + 'm';
-  $('rank').textContent = rankName(m); $('newBest').classList.toggle('on', m > prev && m > 0);
+  const mode = G.mode === 'endless' ? 'normal' : G.mode, m = Math.floor(-G.bestY / P.unitPerM), t = +G.t.toFixed(2), clear = !!G.clear;
+  $('why').textContent = { spike: 'トゲに のった！', enemy: 'ぶつかった！', tide: 'おいつかれた！', time: 'タイムアップ！', goal: 'ゴール！' }[rs.why] || '';
+  store.set('best', Math.max(store.get('best', 0), m));   // 称号・図鑑は高さの最高で
+  let isBest = false, big, unit, rank, bestTxt;
+  if (mode === 'ta1000' && clear) {
+    const prev = store.get('best_ta1000', 0); isBest = !prev || t < prev; if (isBest) store.set('best_ta1000', t);
+    big = t.toFixed(2); unit = '秒'; rank = taRank(t); bestTxt = 'じぶんのさいこう ' + store.get('best_ta1000', t).toFixed(2) + '秒';
+  } else if (mode === 'ta1000') {
+    big = m; unit = 'm'; rank = 'ゴールまで あと ' + Math.max(0, P.goalM - m) + 'm'; const bt = store.get('best_ta1000', 0); bestTxt = bt ? 'じぶんのさいこう ' + bt.toFixed(2) + '秒' : '';
+  } else {
+    const key = mode === 'time30' ? 'best_time30' : 'best_normal', prev = store.get(key, 0); isBest = m > prev && m > 0; store.set(key, Math.max(prev, m));
+    big = m; unit = 'm'; rank = rankName(m); bestTxt = 'じぶんのさいこう ' + store.get(key, m) + 'm';
+  }
+  $('big').firstChild.nodeValue = big; $('big').querySelector('small').textContent = unit;
+  $('best').textContent = (MODE_NAME[mode] || '') + '　' + bestTxt;
+  $('rank').textContent = rank; $('newBest').classList.toggle('on', isBest);
   $('overType').textContent = stats.type; $('overEff').textContent = stats.effLine;
   drawThumb($('overCv'), body, stats.bbox);
-  // 記録（上位10件）
-  const run = { m, rank: rankName(m), type: stats.type, effLine: stats.effLine, eff: stats.effects.map(e => [e.id, e.stars]), date: Date.now(), thumb: thumbURL(body, stats.bbox, 64) };
-  const recs = store.get('recs', []); recs.push(run); recs.sort((a, b) => b.m - a.m); store.set('recs', recs.slice(0, 10));
+  // 記録（モードごとに上位10件。タイムアタックはゴールしたものだけ）
+  const run = { mode, m, t, clear, rank, type: stats.type, effLine: stats.effLine, eff: stats.effects.map(e => [e.id, e.stars]), date: Date.now(), thumb: thumbURL(body, stats.bbox, 64) };
+  if (mode !== 'ta1000' || clear) {
+    const key = 'recs_' + mode, recs = store.get(key, []); recs.push(run);
+    recs.sort((a, b) => mode === 'ta1000' ? a.t - b.t : b.m - a.m); store.set(key, recs.slice(0, 10));
+  }
   // 図鑑：効果ごとの最高と、出会った組み合わせ
   const zk = store.get('zk', { eff: {}, combo: {} }); zk.names = zk.names || {};
   for (const e of stats.effects) zk.eff[e.id] = Math.max(zk.eff[e.id] || 0, m);
   zk.names[stats.type] = Math.max(zk.names[stats.type] || 0, m);
-  const key = stats.effects.map(e => e.id).sort().join('+'); zk.combo[key] = Math.max(zk.combo[key] || 0, m);
+  const ckey = stats.effects.map(e => e.id).sort().join('+'); zk.combo[ckey] = Math.max(zk.combo[ckey] || 0, m);
   store.set('zk', zk);
   lastRun = run;
   show('over');
 }
 let lastRun = null;
 function titleInfo() {
-  const b = store.get('best', 0);
-  $('tBest').textContent = b ? `さいこう ${b}m ・ ${rankName(b)}` : '';
+  const a = store.get('best_time30', 0), t = store.get('best_ta1000', 0), parts = [];
+  if (a) parts.push(`30秒 ${a}m`); if (t) parts.push(`1000m ${t.toFixed(2)}秒`);
+  $('tBest').textContent = parts.length ? 'さいこう　' + parts.join('　') : '';
 }
 function recsUI() {
-  const recs = store.get('recs', []), box = $('recList'); box.innerHTML = '';
-  if (!recs.length) { box.innerHTML = '<p class="empty">まだ記録がありません</p>'; return; }
-  recs.forEach((r, i) => {
-    const d = new Date(r.date), el = document.createElement('div'); el.className = 'rec';
-    el.innerHTML = `<b>${i + 1}</b><canvas width="64" height="64"></canvas><span>${r.type}　<b style="width:auto;font-size:12px">${r.rank}</b><small>${r.effLine || ''}　${d.getMonth() + 1}/${d.getDate()}</small></span><em>${r.m}m</em>`;
-    const im = new Image(); im.onload = () => el.querySelector('canvas').getContext('2d').drawImage(im, 0, 0); im.src = r.thumb;
-    box.append(el);
-  });
+  const box = $('recList'); box.innerHTML = '';
+  for (const [mode, title] of [['time30', '30秒アタック'], ['ta1000', '1000mタイムアタック']]) {
+    const h = document.createElement('p'); h.className = 'zkh'; h.textContent = title; box.append(h);
+    const recs = store.get('recs_' + mode, []);
+    if (!recs.length) { const e = document.createElement('p'); e.className = 'empty'; e.textContent = 'まだ記録がありません'; box.append(e); continue; }
+    recs.slice(0, 5).forEach((r, i) => {
+      const d = new Date(r.date), el = document.createElement('div'); el.className = 'rec';
+      const score = mode === 'ta1000' ? r.t.toFixed(2) + '秒' : r.m + 'm';
+      el.innerHTML = `<b>${i + 1}</b><canvas width="64" height="64"></canvas><span>${r.type}　<b style="width:auto;font-size:12px">${r.rank}</b><small>${r.effLine || ''}　${d.getMonth() + 1}/${d.getDate()}</small></span><em>${score}</em>`;
+      const im = new Image(); im.onload = () => el.querySelector('canvas').getContext('2d').drawImage(im, 0, 0); im.src = r.thumb;
+      box.append(el);
+    });
+  }
 }
 function zukanUI() {
   const zk = store.get('zk', { eff: {}, combo: {} }), names = zk.names || {}, box = $('zukList'); box.innerHTML = '';
@@ -1755,14 +1807,18 @@ function buildCard() {
   drawBody(g, newDeform(), b.w * k, b.h * k, 1, false, 0, body); g.restore();
   // 記録
   const r = lastRun;
-  g.fillStyle = COL.ink; g.font = `900 150px ${F}`; g.fillText(r.m + 'm', W / 2, 960);
+  g.fillStyle = COL.sub; g.font = `900 40px ${F}`; g.fillText(MODE_NAME[r.mode] || '', W / 2, 840);
+  g.fillStyle = COL.ink; g.font = `900 150px ${F}`; g.fillText(r.mode === 'ta1000' && r.clear ? r.t.toFixed(2) + '秒' : r.m + 'm', W / 2, 960);
   g.fillStyle = COL.move; g.font = `900 60px ${F}`; g.fillText(r.rank, W / 2, 1060);
   g.fillStyle = COL.ink; g.font = `900 46px ${F}`; g.fillText(r.type, W / 2, 1130);
   const stars = stats.effects.map(e => '「' + e.name + '」' + '★'.repeat(e.stars)).join(' × '); g.font = `800 32px ${F}`; g.fillStyle = '#c9a100'; g.fillText(stars, W / 2, 1185);
   const d = new Date(r.date); g.fillStyle = COL.ink; g.font = `800 32px ${F}`; g.fillText(`${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}　#おえかきジャンプ`, W / 2, 1295);
   return c;
 }
-function shareText() { return `おえかきジャンプで ${lastRun.m}m！ 称号「${lastRun.rank}」\n${lastRun.type}　${lastRun.effLine}\n#おえかきジャンプ`; }
+function shareText() {
+  const r = lastRun, head = r.mode === 'ta1000' && r.clear ? `1000mを ${r.t.toFixed(2)}秒！` : r.mode === 'time30' ? `30秒で ${r.m}m！` : `${r.m}m！`;
+  return `おえかきジャンプ ${head} 称号「${r.rank}」\n${r.type}　${r.effLine}\n#おえかきジャンプ`;
+}
 function saveCard() {
   const c = buildCard();
   c.toBlob(async blob => {
