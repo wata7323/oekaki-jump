@@ -136,6 +136,18 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 .rec span,.zk span{flex:1}
 .rec em,.zk em{font-style:normal;font-size:17px;font-weight:900}
 .zk.no{opacity:.35}
+/* 図鑑：1画面に収まる小さなマス */
+#zukan{justify-content:center;gap:8px}
+.zkh2{margin:4px 0 -2px;font-size:12px;font-weight:900;opacity:.75;width:100%;max-width:340px}
+.zg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;width:100%;max-width:340px}
+.zg.z4{grid-template-columns:repeat(4,1fr)}
+.zt{display:flex;flex-direction:column;align-items:center;gap:2px;background:rgba(255,255,255,.08);border-radius:12px;padding:6px 2px 5px}
+.zt canvas{width:min(40px,10vw);height:min(40px,10vw);background:#fff;border-radius:9px}
+.zt span{font-size:10px;font-weight:800;line-height:1.2;text-align:center;white-space:nowrap}
+.zt.no canvas{background:rgba(255,255,255,.15)}
+.zt.no span{opacity:.45}
+.zkrank{margin:6px 0 0;font-size:14px;font-weight:900;text-align:center}
+.zkrank small{display:block;font-size:11px;opacity:.7;font-weight:700}
 .zkh{grid-column:1/3;margin:6px 0 -2px;font-size:13px;font-weight:900;opacity:.8}
 .zk canvas:empty{}
 .empty{opacity:.7;font-size:14px;font-weight:700;margin:20px 0}
@@ -224,9 +236,11 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
   <div class="ov" id="zukan">
     <h3>図鑑</h3>
     <p class="sub2" id="zukSum"></p>
-    <div id="zukList"></div>
-    <h3>称号</h3>
-    <div id="rankList" style="display:grid;gap:6px;width:100%;max-width:340px"></div>
+    <p class="zkh2">かたち</p>
+    <div class="zg" id="zukShapes"></div>
+    <p class="zkh2">特殊効果</p>
+    <div class="zg z4" id="zukEff"></div>
+    <p class="zkrank" id="zukRank"></p>
     <p class="cls">さわって とじる</p>
   </div>
 </div>
@@ -234,7 +248,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 <script>
 /*SIM-START*/
 // ===== ゲームの計算部分（DOM を使わない。Node の試し遊びはここだけを読み込む）=====
-const VERSION = '0.9.0';
+const VERSION = '0.10.0';
 
 // ===== 調整用パラメータ =====
 const P = {
@@ -251,11 +265,12 @@ const P = {
   // 基本の動き
   gravity: 3000, maxFall: 1700, jumpVy: 1160, jumpVx: 250, groundFriction: 22,
   // コンボ（ポンポンポーン）
+  flow: { step: 0.05, max: 5 },   // 勢いの引き継ぎ：止まらず跳ぶたび +5%（最大5回ぶん）
   comboWindow: 0.60, combo2Mul: 1.10, bigJumpMul: 1.1, comboFallBreak: true, comboRise: 20,
   feverStep: 0.10, feverMax: 3,   // 止まらず跳び続けると、大ジャンプが 1回ごとに +10%（最大3回ぶん）
   // 引っ張り操作：hMax 横の伸び（全力・真横寄りのとき jumpVx の何倍）、minUp 上向きの最低量、vyAngle 斜めでも上昇を保つ割合
   pull: { hMax: 2.0, minUp: 0.35, minUpAir: 0.2, vyAngle: 0.5, wallInto: 0.25, wallOut: 0.45, kickH: 0.7, capV: 2300,
-    minLen: 10, maxLen: 70, minPow: 0.55 },   // 画面上の引っ張り距離（px）→ 強さ：minLen 未満は無効、maxLen で最大、最低でも minPow
+    minLen: 10, maxLen: 70, minPow: 0.55, chargeMax: 1.2, chargeTime: 0.45 },   // chargeMax・chargeTime：ため（いっぱいに引いて待つ）の上限と、たまるまでの秒数   // 画面上の引っ張り距離（px）→ 強さ：minLen 未満は無効、maxLen で最大、最低でも minPow
   // ストレスを減らす補正
   bufferTime: 0.35, bufferHoldAir: 0.9, coyoteTime: 0.09, landAssist: 12,
   magnetRange: 130, magnetPull: 1300,   // 下降中、真下に足場があれば横の勢いを弱めて乗せる（上限 単位/秒²）
@@ -270,7 +285,7 @@ const P = {
   // 能力の効き
   ab: {
     // 丸：弾む。弾んだ瞬間にタップすると落ちてきた勢いを上乗せして、どんどん高く
-    bounceBase: 0.12, bounceRound: 0.62, bounceMinV: 300, bounceStopV: 200, bounceJump: 0.05, chainStep: 0.06, chainMax: 4, wallBounce: 0.15,
+    bounceBase: 0.12, bounceRound: 0.62, bounceMinV: 300, bounceStopV: 200, bounceJump: 0.05, chainStep: 0.09, chainMax: 4, wallBounce: 0.15,
     // 平ら：壁に吸い付き、反対側へ大きく壁キック（ジグザグ）
     wallMin: 0.15, wallEnterVy: 150, flatEnterVy: 150, wallSlideMax: 340, flatHold: 1.0,
     kickBase: 0.72, kickFlat: 0.32, kickSpike: 0.4, kickVxFlat: 1.6, wallHops: 1, hopMul: 0.78,
@@ -282,7 +297,7 @@ const P = {
     hookMin: 0.12, hookR0: 14, hookR1: 26, hookJump: 0.15, grabMaxUpV: 300, hookUpV: 200, grabCd: 0.35,
     ropeLen0: 30, ropeLen1: 35, swingG: 0.7, swingAmp: 1.0, swingPump: 6, swingCarry: 0.45, hangDamp: 0.3,   // ropeLen：とがった先が伸びてできるロープの長さ（ropeLen0 + ropeLen1×★）
     // ハイジャンプ：高く・横は控えめ　ふわり：落ちるときの重力と最高落下速度を下げる
-    highVy: 0.17, highVx: 0.25, glideG: 0.55, glideUpG: 0.42, glideFall: 0.5, glideAssist: 22, glideMagnet: 0.8,
+    highVy: 0.17, highVx: 0.25, glideG: 0.55, glideUpG: 0.42, glideHoldV: 110, glideSteer: 260, glideFall: 0.5, glideAssist: 22, glideMagnet: 0.8,
     // 空中ジャンプ：空中で1回だけ跳べる（強さ airPow0 + airPow1×★）
     airPow0: 0.45, airPow1: 0.55, airHold: 1.4, airSlow: 0.25,   // airHold：空中で狙うとスローになる秒数、airSlow：そのときの速さ
     // 大ジャンプ：2回目で大ジャンプが出る（★が少ないと倍率を少し下げる）
@@ -629,6 +644,8 @@ function derive(s) {
     wallOk: flat > 0 || spike > 0,
     wallEnterVy: A.wallEnterVy + A.flatEnterVy * flat + A.spikeEnterVy * spike,
     stab,
+    highJ: high > 0,
+    charge: high > 0 || spike > 0,   // ためができる（ハイジャンプは地上、ザクザクは刺さっているとき）
     slide: A.wallSlideMax * (1 - hold),
     kick: A.kickBase + A.kickFlat * flat + A.kickSpike * spike,
     kickVx: 1 + A.kickVxFlat * flat,
@@ -789,9 +806,14 @@ function newGame(stats, seed, mode = 'endless') {
   return G;
 }
 // 入力：引っ張って離す。ax, ay は「飛ぶ向き」（画面の向き。上が -）、pw は強さ 0..1
-function launch(G, ax, ay, pw) { const L = Math.hypot(ax, ay) || 1; G.buf = { ax: ax / L, ay: ay / L, pw: clamp(pw, 0, 1), t: G.t }; }
+function launch(G, ax, ay, pw) { const L = Math.hypot(ax, ay) || 1; G.buf = { ax: ax / L, ay: ay / L, pw: clamp(pw, 0, P.pull.chargeMax), t: G.t }; }
 function tap(G, dir) { launch(G, dir * 0.3, -1, 1); }
 // 空中で狙い始めたら止まる（空中ジャンプが残っているときだけ）。off で解除
+function glideHold(G, on, ax) {
+  const pl = G.pl;
+  pl.gliding = !!on && pl.st === 'air' && G.ab.glide < 1;
+  if (pl.gliding) pl.glideAx = ax;
+}
 function airHold(G, on) {
   const pl = G.pl;
   if (on && pl.st === 'air' && pl.airLeft > 0 && !landingSoon(G) && G.t - pl.lastGroundT > P.coyoteTime) {
@@ -811,7 +833,7 @@ function step(G, dt) {
     const age = G.t - G.buf.t, keep = age <= P.bufferTime || (pl.st === 'air' && age <= P.bufferHoldAir);
     if (!keep) { G.buf = null; G.ev.push({ k: 'nope' }); } else if (tryJump(G, G.buf)) G.buf = null;
   }
-  if (pl.st === 'ground' && G.t - pl.landT > P.comboWindow) pl.combo = 0;
+  if (pl.st === 'ground' && G.t - pl.landT > P.comboWindow) { pl.combo = 0; pl.flowN = 0; }   // 止まったら勢いは消える
   if (pl.st === 'ground') stepGround(G, dt);
   else if (pl.st === 'hang') stepHang(G, dt);
   else if (pl.st === 'stuck') stepStuck(G, dt);
@@ -868,13 +890,14 @@ function tryJump(G, a) {
   const cont = kind !== 'ground' || t - pl.landT <= P.comboWindow + P.coyoteTime;
   if (!cont) pl.fever = 0;
   pl.combo = cont ? pl.combo + 1 : 1;
+  pl.flowN = cont ? Math.min((pl.flowN || 0) + 1, P.flow.max) : 0; const fl = 1 + P.flow.step * pl.flowN;   // 勢い
   const big = pl.combo >= ab.bigAt;
-  const mul = big ? ab.bigMul + ab.feverStep * Math.min(pl.fever, P.feverMax) : 1;
+  const mul = (big ? ab.bigMul + ab.feverStep * Math.min(pl.fever, P.feverMax) : 1) * fl;
   const onBounce = t - pl.bounceT <= P.coyoteTime + 0.03;
   if (kind === 'stuck') {   // 足場の裏から：ふつうのジャンプと同じ（上を狙えばそのまま足場を突き抜けて乗れる）
-    pl.vx = hx; pl.vy = -vyBase * mul; pl.stuckOn = null;
+    pl.vx = hx * fl; pl.vy = -vyBase * mul; pl.stuckOn = null;
   } else if (kind === 'ground') {
-    pl.vx = hx; pl.vy = -vyBase * mul;
+    pl.vx = hx * fl; pl.vy = -vyBase * mul;
     if (onBounce && ab.bounceJump > 0) {
       // 弾んだ瞬間に離す：続けるほど高くなる（ポヨン×n）。下に落ちたら数え直し
       pl.chain = Math.min(pl.chain + 1, A.chainMax);
@@ -901,7 +924,7 @@ function tryJump(G, a) {
   const fever = pl.fever;
   if (big) { pl.combo = 0; pl.fever++; }
   pl.st = 'air'; pl.lastGroundT = -9; pl.bounceT = -9; pl.jumpY = pl.y; pl.bigFlight = big; pl.plat = null; pl.ceilUsed = kind === 'stuck';
-  G.ev.push({ k: 'jump', kick: kind === 'wall' && !into ? pl.kickChain || 0 : 0, combo: big ? 3 : pl.combo, big, fever, from: kind, chain: kind === 'ground' ? pl.chain : 0, hop: !!pl.hop, pw });
+  G.ev.push({ k: 'jump', flow: pl.flowN, kick: kind === 'wall' && !into ? pl.kickChain || 0 : 0, combo: big ? 3 : pl.combo, big, fever, from: kind, chain: kind === 'ground' ? pl.chain : 0, hop: !!pl.hop, pw });
   return true;
 }
 
@@ -946,6 +969,9 @@ function stepGround(G, dt) {
 
 function stepAir(G, dt) {
   const pl = G.pl, ab = G.ab, A = P.ab;
+  if (pl.gliding && pl.vy > 0) {   // ふわりの滑空：ゆっくり降りながら、狙った向きへ流れる
+    pl.vy = Math.min(pl.vy, A.glideHoldV); pl.vx += (pl.glideAx * A.glideSteer - pl.vx) * Math.min(1, dt * 3);
+  }
   if (pl.hoverT > 0) {   // 空中で狙っている間はスロー（止めずに、ゆっくり進む）
     pl.hoverT -= dt; if (pl.hoverT <= 0) G.ev.push({ k: 'hoverEnd' });
     dt *= P.ab.airSlow;
@@ -1035,8 +1061,9 @@ function magnet(G, dt) {
 
 function land(G, s, v, mb = 0) {
   const pl = G.pl, ab = G.ab, A = P.ab;
+  pl.gliding = false;
   if (s.hazard) { pl.y = s.y + mb; pl.vy = 0; G.over = true; G.ev.push({ k: 'over', why: 'spike' }); return; }   // トゲ床に乗ったらアウト
-  if (P.comboFallBreak && s.y > pl.jumpY - P.comboRise) { pl.combo = 0; pl.chain = 0; pl.fever = 0; }   // 跳んだ所より上に乗れなければコンボ・ポヨンは切れる   // 跳んだ所より下に降りたらコンボ・ポヨンは切れる
+  if (P.comboFallBreak && s.y > pl.jumpY - P.comboRise) { pl.combo = 0; pl.chain = 0; pl.fever = 0; pl.flowN = 0; }   // 跳んだ所より上に乗れなければコンボ・ポヨンは切れる   // 跳んだ所より下に降りたらコンボ・ポヨンは切れる
   if (v > A.bounceMinV && v * ab.bounce > A.bounceStopV) {
     pl.vy = -v * ab.bounce; pl.y = s.y + mb - 0.01; pl.vx *= 0.8; pl.st = 'air';
     pl.bounceT = G.t; pl.bounceV = v; pl.landT = G.t; pl.lastGroundT = G.t; pl.wallHops = 0; pl.airLeft = ab.airJumps; pl.kickChain = 0;
@@ -1326,8 +1353,8 @@ let stats = null;
 // 形の数値から「〇〇型」と登り方の一言を決める（いちばん強い特徴が主役、2番目が強ければ並べる）
 // 特殊効果のひとこと（短く）
 const EFFECT_INFO = {
-  bounce: '弾む瞬間に離すと高く', swing: '端につかまって飛び出す', kick: '壁から壁へ キックで加速', stab: '壁にも 足場の裏にも 刺さる',
-  high: 'ひと跳びが高い', glide: 'ふわっと着地', air: '空中で止まって もう1回', big: '2回目で大ジャンプ',
+  bounce: '弾む瞬間に離すと高く', swing: '端につかまって飛び出す', kick: '壁から壁へ キックで加速', stab: '刺さって ためて 飛び出す',
+  high: '引いたまま待つと ためジャンプ', glide: '空中で引っぱると 滑空', air: '空中で止まって もう1回', big: '2回目で大ジャンプ',
 };
 // 描き方の早見表：かたちの見本 → 効果
 const CHART = [
@@ -1430,7 +1457,7 @@ let G = null, acc = 0, cam = 0, rs = null, overT = 0;
 function startPlay() {
   auInit();
   G = newGame(stats, (Math.random() * 2 ** 32) >>> 0, playMode === 'time30' || playMode === 'ta1000' ? playMode : 'endless');
-  rs = { D: newDeform(), bigT: 0, pops: [], seen: new Set(), shake: 0, lines: [], parts: [], streak: 0, rankIdx: rankIndex(0) };
+  rs = { D: newDeform(), bigT: 0, pops: [], seen: new Set(), shake: 0, lines: [], parts: [], trail: [], hitstop: 0, streak: 0, rankIdx: rankIndex(0) };
   cam = -viewH() * 0.62; acc = 0; overT = 0; show('play'); rs.warned = false;
   if (playMode === 'tutorial') tutStart();
 }
@@ -1445,12 +1472,20 @@ $('bSnd').addEventListener('pointerdown', e => { e.stopPropagation(); AU.on = !A
 $('bQuit').addEventListener('pointerdown', e => { e.stopPropagation(); if (G && !G.over) { G.over = true; G.ev.push({ k: 'over' }); } });
 // 引っ張り入力：開始点→今の点が「引っ張り」。離すと逆向きに飛ぶ。短すぎる操作は無視
 let aim = null;
+function canCharge() {
+  if (!G || !G.ab.charge) return false;
+  const st = G.pl.st, ab = G.ab;
+  return (ab.stab && (st === 'wall' || st === 'stuck')) || (ab.highJ && (st === 'ground' || st === 'stuck'));
+}
 function aimNow() {
   if (!aim) return null;
   const Q = P.pull, dx = aim.x - aim.sx, dy = aim.y - aim.sy, L = Math.hypot(dx, dy);
   if (L < Q.minLen) return { ok: false, L };
-  const t = clamp((L - Q.minLen) / (Q.maxLen - Q.minLen), 0, 1), pw = Q.minPow + (1 - Q.minPow) * (1 - (1 - t) * (1 - t));
-  return { ok: true, ax: -dx / L, ay: -dy / L, pw, full: t >= 1, L };
+  const t = clamp((L - Q.minLen) / (Q.maxLen - Q.minLen), 0, 1);
+  let pw = Q.minPow + (1 - Q.minPow) * (1 - (1 - t) * (1 - t));
+  const ch = canCharge() ? clamp((aim.fullT || 0) / Q.chargeTime, 0, 1) : 0;
+  pw *= 1 + (Q.chargeMax - 1) * ch;
+  return { ok: true, ax: -dx / L, ay: -dy / L, pw, full: t >= 1, L, ch };
 }
 app.addEventListener('pointerdown', e => {
   if (mode !== 'play' || !G || G.over || aim) return;
@@ -1465,8 +1500,9 @@ app.addEventListener('pointerup', e => {
   aim.x = e.clientX; aim.y = e.clientY;
   const a = aimNow(); aim = null;
   if (a && a.ok && G && !G.over) launch(G, a.ax, a.ay, a.pw); else if (G) airHold(G, false);
+  if (G) glideHold(G, false, 0);
 });
-app.addEventListener('pointercancel', () => { aim = null; if (G) airHold(G, false); });
+app.addEventListener('pointercancel', () => { aim = null; if (G) { airHold(G, false); glideHold(G, false, 0); } });
 
 function scale() { return cv.width / P.W; }
 function viewH() { return cv.height / scale(); }
@@ -1499,7 +1535,7 @@ function handleEvents() {
     if (e.k === 'land' || (e.k === 'bounce' && !e.wall)) { rs.shake = Math.max(rs.shake, Math.min(3, e.v / 700)); puff(G.pl.x, G.pl.y, 6, '#ffffff', Math.min(200, e.v / 6)); if (e.v > 900) buzz(8); }
     if (e.k === 'jump' && e.chain >= 1) pop('ポヨン' + (e.chain > 1 ? '×' + e.chain : ''), COL.ink, 14 + e.chain * 2);
     else if (e.k === 'jump' && e.from === 'hang') pop('ビュン！', COL.ink, 17);
-    else if (e.k === 'jump' && e.from === 'air') pop('ピョン', COL.ink, 15);
+    else if (e.k === 'jump' && e.from === 'air') { pop('ピョン', COL.ink, 15); for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; rs.parts.push({ x: G.pl.x, y: G.pl.y - G.pl.h / 2, vx: Math.cos(a) * 160, vy: Math.sin(a) * 160, t: 0, life: 0.35, r: 3, col: COL.acc2 }); } }
     else if (e.k === 'jump' && e.from === 'wall') pop(e.hop ? 'よじっ' : e.kick > 1 ? 'キック！×' + e.kick : 'キック！', COL.ink, 15 + Math.min(4, e.kick) * 2);
     else if (e.k === 'jump' && e.big) pop(e.fever ? '大ジャンプ！×' + (e.fever + 1) : '大ジャンプ！', COL.acc2, 20 + Math.min(3, e.fever) * 3);
     else if (e.k === 'stick') pop('ペタッ', COL.ink);
@@ -1507,13 +1543,13 @@ function handleEvents() {
     else if (e.k === 'hook') pop('ガシッ', COL.ink);
     if (e.k === 'jump') {
       SFX.jump(e.combo, e.big, rs.streak); D.sq.p = Math.max(D.sq.p, 0); D.sq.v += e.big ? 10 : 7; D.press.p = 0;
-      if (e.big) { rs.bigT = 0.5; rs.shake = 5 + Math.min(3, e.fever) * 2; } if (e.from === 'wall') SFX.kick();
+      if (e.big) { rs.bigT = 0.5; rs.shake = 8 + Math.min(3, e.fever) * 2; rs.hitstop = 0.07; } if (e.from === 'wall') SFX.kick();
     } else if (e.k === 'land') {
       SFX.land(e.v); D.sq.p = -Math.min(0.55, e.v / 2600 * (0.8 + wgt * 0.7)); D.sq.v = 0; D.wob.v += (G.pl.vx >= 0 ? 1 : -1) * e.v / 300;
     } else if (e.k === 'bounce') {
       SFX.bounce(e.v);
       if (e.wall) { D.side = G.pl.vx > 0 ? -1 : 1; D.press.p = 1; D.press.v = 0; }
-      else { D.sq.p = -Math.min(0.6, e.v / 1800); D.sq.v = 0; D.wob.v += e.v / 250; }
+      else { D.sq.p = -Math.min(0.7, e.v / 1800 + (G.pl.chain || 0) * 0.05); D.sq.v = 0; D.wob.v += e.v / 250; }
     }
     else if (e.k === 'stick') { SFX.stick(); D.side = e.side; D.press.p = 1.15; D.press.v = 0; D.wob.v += 3; }
     else if (e.k === 'stab') { SFX.stab(); D.side = e.side || 1; D.quiver = 1; D.press.p = e.ceil ? 0 : 0.4; if (e.ceil) { D.sq.p = 0.3; } }
@@ -1600,8 +1636,12 @@ function render(dt) {
       cx.fillStyle = COL.ink; cx.fillText(G.ab.stab ? '刺さる壁' : 'くっつく壁', lx, my); cx.textAlign = 'left';
     }
   }
-  // 狙い（引っ張り中）
+  // 狙い（引っ張り中）。いっぱいまで引いている時間を数える（ため）
+  if (aim) { const L0 = Math.hypot(aim.x - aim.sx, aim.y - aim.sy); aim.fullT = L0 >= P.pull.maxLen ? (aim.fullT || 0) + dt : 0; }
   const AV = aimNow();
+  if (AV && AV.ok && AV.ch >= 1 && !aim.chDone) { aim.chDone = true; SFX.ok(); rs.shake = Math.max(rs.shake, 2); }
+  // ふわりの滑空：空中で引っ張っている間、狙った向きへ流れる
+  if (G.ab.glide < 1) glideHold(G, !!(aim && pl.st === 'air'), AV && AV.ok ? AV.ax : 0);
   // キャラ：状況ごとの変形の目標へばねで近づける（描いた線そのものが変形する）
   const D = rs.D, ab = G.ab, sw = ab.w, sh = ab.h, hang = pl.st === 'hang';
   let tSq = 0, tLean = 0, tPress = 0, tBend = 0, tRot = 0;
@@ -1639,6 +1679,12 @@ function render(dt) {
     cx.translate(0, ropeL);
     drawBody(cx, D, sw, sh, pl.face, { gx, gy, ax: axx, ay: ayy, len, stretch: 1 }, G.t);
   } else {
+    // 勢いが乗っている間（3回以上続けて跳んでいる）は、うしろに残像
+    if ((pl.flowN || 0) >= 3 && pl.st === 'air') {
+      rs.trail.push([pl.x, pl.y]); if (rs.trail.length > 6) rs.trail.shift();
+      rs.trail.forEach(([tx, ty], i) => { if (i % 2) return; cx.save(); cx.globalAlpha = 0.12 + i * 0.03; cx.translate(tx, ty); drawBody(cx, D, sw, sh, pl.face, false, G.t); cx.restore(); });
+      cx.globalAlpha = 1;
+    } else rs.trail.length = 0;
     cx.translate(pl.x, pl.y);
     if (pl.st === 'wall') cx.translate(pl.wallSide * (sw - ab.w) / 2, 0);
     drawBody(cx, D, sw, sh, pl.face, false, G.t);
@@ -1672,6 +1718,10 @@ function render(dt) {
   cx.globalAlpha = 1; cx.textAlign = 'left';
   rs.pops = rs.pops.filter(p => p.t < 0.8);
   if (AV) drawAim(AV, pl, s);
+  if (AV && AV.ok && AV.ch > 0) {   // ためている輪（満ちると脈打つ）
+    const r0 = Math.max(pl.hw, pl.h / 2) + 12, pulse = AV.ch >= 1 ? 1 + Math.sin(performance.now() / 60) * 0.08 : 1;
+    cx.strokeStyle = COL.acc2; cx.lineWidth = 4; cx.beginPath(); cx.arc(pl.x, pl.y - pl.h / 2, r0 * pulse, -Math.PI / 2, -Math.PI / 2 + AV.ch * Math.PI * 2); cx.stroke();
+  }
   if (tut && tut.step === 0 && !aim) drawDragHint(pl);
   // 空中で止まっている間：残り時間の輪
   if (pl.hoverT > 0) { const f = pl.hoverT / P.ab.airHold; cx.strokeStyle = COL.acc2; cx.lineWidth = 3; cx.beginPath(); cx.arc(pl.x, pl.y - pl.h / 2, Math.max(pl.hw, pl.h / 2) + 10, -Math.PI / 2, -Math.PI / 2 + f * Math.PI * 2); cx.stroke(); }
@@ -1819,29 +1869,22 @@ function recsUI() {
     });
   }
 }
-function zukanUI() {
-  const zk = store.get('zk', { eff: {}, combo: {} }), names = zk.names || {}, box = $('zukList'); box.innerHTML = '';
-  const got = Object.keys(zk.eff).length, gotN = Object.keys(names).length;
-  $('zukSum').textContent = `かたち ${gotN}/${SHAPE_NAMES.length}　特殊効果 ${got}/8` + (got >= 8 && gotN >= SHAPE_NAMES.length ? '　コンプリート！' : '');
-  box.style.gridTemplateColumns = '1fr 1fr';
-  const cell = (title, sub, has, draw) => {
-    const el = document.createElement('div'); el.className = 'zk' + (has ? '' : ' no');
+function zukanUI() {   // スマホで1画面に収まるように：小さなマスに絵と名前だけ。称号は今と次だけ
+  const zk = store.get('zk', { eff: {}, combo: {} }), names = zk.names || {};
+  const gotN = Object.keys(names).length, gotE = Object.keys(zk.eff).length, best = store.get('best', 0), ri = rankIndex(best);
+  $('zukSum').textContent = `かたち ${gotN}/${SHAPE_NAMES.length}　特殊効果 ${gotE}/8　称号 ${ri + 1}/${RANKS.length}` + (gotN >= SHAPE_NAMES.length && gotE >= 8 ? '　コンプリート！' : '');
+  const tile = (box, title, has, draw) => {
+    const el = document.createElement('div'); el.className = 'zt' + (has ? '' : ' no');
     const c = document.createElement('canvas'); c.width = c.height = 80;
     if (has && !draw) { const rec = ['recs_time30', 'recs_ta1000', 'recs_normal', 'recs'].flatMap(k => store.get(k, [])).find(r => r.type === title); if (rec) { const im = new Image(); im.onload = () => c.getContext('2d').drawImage(im, 8, 8, 64, 64); im.src = rec.thumb; } }
     if (has && draw) { const g = c.getContext('2d'); g.setTransform(80 / P.boxSize * 0.8, 0, 0, 80 / P.boxSize * 0.8, 8, 8); strokePath(g, draw()); }
-    const t = document.createElement('span'); t.innerHTML = has ? `${title}<small>${sub}</small>` : '？？？<small>まだ</small>';
-    el.append(c, t); return el;
+    const t = document.createElement('span'); t.textContent = has ? title : '？'; el.append(c, t); box.append(el);
   };
-  const hdr = t => { const h = document.createElement('p'); h.className = 'zkh'; h.textContent = t; box.append(h); };
-  hdr('かたち');
-  for (const n of SHAPE_NAMES) box.append(cell(n, names[n] !== undefined ? 'さいこう ' + names[n] + 'm' : '', names[n] !== undefined, null));
-  hdr('特殊効果');
-  for (const [id, how, mk] of CHART) box.append(cell(EFFECTS.find(e => e.id === id).name, 'さいこう ' + zk.eff[id] + 'm', zk.eff[id] !== undefined, mk));
-  const best = store.get('best', 0), rl = $('rankList'); rl.innerHTML = '';
-  for (const [h, n] of RANKS) {
-    const el = document.createElement('div'); el.className = 'zk' + (best >= h ? '' : ' no');
-    el.innerHTML = `<span>${best >= h ? n : '？？？'}</span><em style="font-size:13px">${best >= h ? h + 'm〜' : ''}</em>`; rl.append(el);
-  }
+  const sb = $('zukShapes'), eb = $('zukEff'); sb.innerHTML = ''; eb.innerHTML = '';
+  for (const n of SHAPE_NAMES) tile(sb, n, names[n] !== undefined, null);
+  for (const [id, how, mk] of CHART) tile(eb, EFFECTS.find(e => e.id === id).name, zk.eff[id] !== undefined, mk);
+  const next = RANKS[ri + 1];
+  $('zukRank').innerHTML = `称号「${RANKS[ri][1]}」` + (next ? `<small>次の称号まで あと ${next[0] - best}m</small>` : '<small>さいごの称号！</small>');
 }
 // 結果カード：描いたキャラと記録を1枚の画像に
 function buildCard() {
@@ -1926,7 +1969,7 @@ function chartUI() {
 const TUT_HINT = {
   bounce: ['弾む瞬間に はなす', e => e.k === 'jump' && e.chain >= 1], swing: ['足場の端へ 近づこう', e => e.k === 'hook'],
   kick: ['黄色い壁へ 跳びつこう', e => e.k === 'stick'], stab: ['壁のほうを ねらうと よじ登る', e => e.k === 'stab'],
-  high: ['高く 跳べる！', null], glide: ['ふわっと 着地', null], air: ['空中で 引っぱると 止まる', e => e.k === 'jump' && e.from === 'air'],
+  high: ['引いたまま 待つと ため', e => e.k === 'jump' && e.pw > 1.1], glide: ['空中で 引っぱると 滑空', null], air: ['空中で 引っぱると 止まる', e => e.k === 'jump' && e.from === 'air'],
   big: ['2回目で 大ジャンプ！', e => e.k === 'jump' && e.big],
 };
 let tut = null;
@@ -1968,6 +2011,7 @@ function frame(now) {
   if (mode === 'title') drawTitle(now);
   if ((mode === 'play' || overT > 0) && G) {
     acc += dt; let n = 0; const h = 1 / 120;
+    if (rs && rs.hitstop > 0) { rs.hitstop -= dt; acc = 0; }   // 大ジャンプの一瞬のタメ
     while (acc >= h && n < 8) { step(G, h); acc -= h; n++; }
     if (acc > h) acc = 0;
     handleEvents(); tutTick(dt); render(dt);
