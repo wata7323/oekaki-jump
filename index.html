@@ -314,7 +314,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 <script>
 /*SIM-START*/
 // ===== ゲームの計算部分（DOM を使わない。Node の試し遊びはここだけを読み込む）=====
-const VERSION = '0.16.0';
+const VERSION = '0.16.1';
 
 // ===== 調整用パラメータ =====
 const P = {
@@ -356,9 +356,8 @@ const P = {
     wallMin: 0.15, wallEnterVy: 150, flatEnterVy: 150, wallSlideMax: 340, flatHold: 1.0,
     kickBase: 0.72, kickFlat: 0.32, kickSpike: 0.4, kickVxFlat: 1.6, wallHops: 1, hopMul: 0.78,
     kickChainStep: 0.12, kickChainMax: 5,   // カベけり：着地せずにキックを続けると 1回ごとに +12%（4回ぶんまで）
-    platThick: 10,        // 足場の厚み（下から当たると頭をぶつける。ザクザクだけは裏に刺さって、次のジャンプで突き抜けられる）
-    // トゲ：壁に刺さって止まり、壁側タップで壁ぞいに何度でもザクザク登る
-    spikeHold: 1.6, spikeStab: 0.35, spikeEnterVy: 150, spikeHopMul: 0.85, spikeHops: 99,
+    // トゲ：壁に刺さって止まり、壁側タップで壁ぞいに何度でもザクザク登る。画面の端の壁にも刺さる（ほかの形は端にはつかめない）
+    spikeHold: 1.6, spikeStab: 0.35, spikeEnterVy: 150, spikeHopMul: 0.85, spikeHops: 99, edgeHops: 1, edgeSticks: 1,   // 画面の端の壁では、着地するまでに 刺されるのは edgeSticks 回、よじ登れるのは edgeHops 回まで（どの向きに引いても跳べる。片側連打だけで登れないように）
     // フック：絵のくぼみを足場の端に掛けて振り子。振りの勢いを乗せて飛ぶ
     hookMin: 0.12, hookR0: 14, hookR1: 26, hookJump: 0.15, grabMaxUpV: 300, hookUpV: 200, grabCd: 0.35,
     hookReach: 1.3, hookSuck: 1.9, hookPull: 900,   // hookReach：つかめる範囲の倍率、hookSuck：吸い寄せが始まる範囲（つかめる範囲の何倍か）、hookPull：吸い寄せの強さ（最大の加速）
@@ -372,10 +371,9 @@ const P = {
     bigLess: 0.5, bigPlus: 0.28,
   },
   // コース
-  //   足場は gridU ごとのマス目にそろえ、幅は platWs の2種類だけ（高くなるほど小さいほうが smallMax の割合まで増える）
-  //   段の間は rowGap（高くなるほど +rowGapGrow）。次の段の足場は、前の足場から横に edgeGap0〜edgeGap1 あけて置く（真上に重ねない）
-  rowGap: 110, rowGapGrow: 12, gridU: 30, platWs: [90, 60], smallMax: 0.5, edgeGap0: 60, edgeGap1: 90, cornerNudge: 10,
-  extraRate: 0.1, pillarEvery: 0, edgeStick: false,   // pillarEvery：途中に立つ柱の間隔（0 で出さない。下から抜けられない足場だと、柱のまわりが行き止まりになりやすい）
+  //   足場は gridU ごとのマス目にそろえ、幅は platWs の2種類だけ（高くなるほど小さいほうが smallMax の割合まで増える）。段の間は rowGap（高くなるほど +rowGapGrow）
+  rowGap: 110, rowGapGrow: 12, gridU: 30, platWs: [90, 60], smallMax: 0.5, rowShiftMin: 90, rowShiftMax: 150, wallAvoid: 110, wallShiftMin: 115,
+  extraRate: 0.1, pillarEvery: 7, edgeStick: false,
   // 動く足場（moveFromRow 段目から出はじめ、moveRampRows 段かけて moveMax の割合まで増える）
   moveFromRow: 25, moveRampRows: 120, moveMax: 0.45, moveAx: 70, moveAyGap: 0.3, movePeriod0: 2.2, movePeriod1: 3.6,
   // 1000m から：トゲ床（乗るとアウト）と敵（触るとアウト）。hazardRampM かけて増える
@@ -383,7 +381,7 @@ const P = {
   timeLimit: 30, goalM: 1000, modeHazardFromM: 150, modeHazardRampM: 1000,
   hazardFromM: 500, hazardRampM: 2000, spikeRate0: 0.25, spikeRate1: 0.55, enemyRate0: 0.06, enemyRate1: 0.25,
   enemyR: 11, enemyHit: 0.75, enemyAx0: 40, enemyAx1: 100,
-  pillarW: 16, pillarRoom: 240,   // pillarRoom：柱の片側に残す広さ（足場をジグザグに置ける幅）
+  pillarW: 16, pillarRoom: 100,
   panelEvery: 6, panelRows: 3.2, panelEveryWall: 6, panelRowsWall: 3.5, panelW: 12, catchRows: 6,   // 左右の端に、ひっつける壁を数段ぶん向かい合わせで置く（壁の形の近道）
   // 下から迫る色
   tideStart: 420, tideV0: 45, tideAcc: 1.6, tideVMax: 210, tideMaxLag: 1000,
@@ -649,10 +647,6 @@ function minBot(G, x1, x2, px = G.pl.x) {   // 足場の範囲にかかる列の
   const sh = shapeOf(G), ox = px - sh.W / 2, a = Math.max(0, Math.floor((x1 - ox) / sh.cw)), b = Math.min(sh.n - 1, Math.ceil((x2 - ox) / sh.cw) - 1);
   let m = Infinity; for (let c = a; c <= b; c++) if (sh.bot[c] < m) m = sh.bot[c]; return m;
 }
-function minTop(G, x1, x2, px = G.pl.x) {
-  const sh = shapeOf(G), ox = px - sh.W / 2, a = Math.max(0, Math.floor((x1 - ox) / sh.cw)), b = Math.min(sh.n - 1, Math.ceil((x2 - ox) / sh.cw) - 1);
-  let m = Infinity; for (let c = a; c <= b; c++) if (sh.top[c] < m) m = sh.top[c]; return m;
-}
 function rowExt(G, y1, y2, py = G.pl.y) {   // 高さ y1..y2 にかかる段の、左右の端（なければ null）
   const sh = shapeOf(G), oy = py - sh.H, a = Math.max(0, Math.floor((y1 - oy) / sh.ch)), b = Math.min(sh.m - 1, Math.ceil((y2 - oy) / sh.ch) - 1);
   let L = Infinity, R = -Infinity;
@@ -766,12 +760,12 @@ function addPlat(C, x1, x2, y, block, hazard) {
   const p = { x1, x2, y, block: !!block, hazard: !!hazard, anc: [] };
   C.plats.push(p);
   if (hazard) return p;   // トゲ床にはつかまれない
-  if (x1 > 0.5 && !touch(x1)) { const a = { x: x1, y, side: -1, solid: !!block, plat: p }; C.anchors.push(a); p.anc.push(a); }
-  if (x2 < P.W - 0.5 && !touch(x2)) { const a = { x: x2, y, side: 1, solid: !!block, plat: p }; C.anchors.push(a); p.anc.push(a); }
+  if (x1 > 0.5 && !touch(x1)) { const a = { x: x1, y, side: -1, solid: !!block }; C.anchors.push(a); p.anc.push(a); }
+  if (x2 < P.W - 0.5 && !touch(x2)) { const a = { x: x2, y, side: 1, solid: !!block }; C.anchors.push(a); p.anc.push(a); }
   return p;
 }
-// 横に m 以上離れているか（list の足場のどれとも重ならない）
-const apart = (list, x1, x2, m) => !list.some(q => x2 > q.x1 - m && x1 < q.x2 + m);
+// マス目（gridU）にそろえる。幅 w の足場の左端を、画面に収まる位置へ
+const snapX = (x1, w) => clamp(Math.round(x1 / P.gridU) * P.gridU, 0, P.W - w);
 function genRow(C) {
   const r = C.rng, U = P.gridU; C.row++;
   const hard = Math.min(1, C.row / 120);
@@ -779,15 +773,13 @@ function genRow(C) {
   const y = C.lastY - gap;
   if (C.pillar && y < C.pillar.y1 - 10) C.pillar = null;
   const base = C.lastMain;
-  if (P.pillarEvery > 0 && !C.pillar && base && !base.mv && C.row > 4 && C.row - (C.pillarRow || 0) >= P.pillarEvery) {
-    // 柱は1つ前の足場の外側の端に立てる（柱の外に乗れる所を作らない）。反対側には、足場をジグザグに置ける広さを残す
-    const okL = P.W - (base.x1 + P.pillarW) >= P.pillarRoom, okR = base.x2 - P.pillarW >= P.pillarRoom;
-    if (okL || okR) {
-      const left = okL && (!okR || r() < 0.5), ph = gap * (2 + Math.floor(r() * 2)), y2 = base.y;
-      const bx1 = left ? base.x1 : base.x2 - P.pillarW, b = { x1: bx1, x2: bx1 + P.pillarW, y1: y2 - ph, y2 };
-      C.blocks.push(b); C.pillar = b; C.pillarRow = C.row;
-      addPlat(C, b.x1, b.x2, b.y1, true);
-    }
+  const pa = base ? Math.max(base.x1 + 25, P.pillarRoom) : 0, pb = base ? Math.min(base.x2 - 25, P.W - P.pillarRoom) : 0;
+  if (!C.pillar && base && !base.mv && C.row > 4 && C.row % P.pillarEvery === 0 && pb > pa) {
+    // 柱は1つ前の足場の上に立てる（下に頭をぶつける隙間を作らない）。左右には足場を置ける幅を残す。柱の両側がマス目にそろうように
+    const px = clamp(Math.round(lerp(pa, pb, r()) / U) * U, pa, pb), ph = gap * (2 + Math.floor(r() * 2)), y2 = base.y;
+    const b = { x1: px - P.pillarW / 2, x2: px + P.pillarW / 2, y1: y2 - ph, y2 };
+    C.blocks.push(b); C.pillar = b;
+    addPlat(C, b.x1, b.x2, b.y1, true);
   }
   // 壁にくっつける形のときは、向かい合う黄色い壁の区間を多めに（連続キックの出番）
   const pe = C.wallShape ? P.panelEveryWall : P.panelEvery, pr = C.wallShape ? P.panelRowsWall : P.panelRows;
@@ -796,29 +788,22 @@ function genRow(C) {
     C.blocks.push({ x1: 0, x2: P.panelW, y1, y2, panel: true }, { x1: P.W - P.panelW, x2: P.W, y1, y2, panel: true });
   }
   const pil = C.pillar && y > C.pillar.y1 - 10 && y < C.pillar.y2 + 10 ? C.pillar : null;
-  // 柱がある間は、柱の広いほうだけを使う
-  const lo = pil && pil.x1 < P.W / 2 ? Math.ceil(pil.x2 / U) * U : 0, hi = pil && pil.x1 >= P.W / 2 ? Math.floor(pil.x1 / U) * U : P.W;
   const pickW = () => r() < P.smallMax * hard ? P.platWs[1] : P.platWs[0];
-  const slots = (w, ok) => { const o = []; for (let x1 = lo; x1 + w <= hi + 0.5; x1 += U) if (ok(x1, x1 + w)) o.push(x1); return o; };
-  const any = list => list[Math.floor(r() * list.length)];
-  // 本道：前の足場から横に edgeGap0〜edgeGap1 あけた所。1つ下・2つ下の段の足場の真上には なるべく置かない（下から跳んで頭をぶつけないように）
-  //   置けなければ、少し遠く → 小さい足場 → 2つ下の段は気にしない、の順にゆるめる
-  let w = pickW(); const prev = C.lastMain, m1 = prev ? [prev] : C.prevRow, m2 = C.lastMain2 ? [C.lastMain2] : [];
-  const side = (x1, x2) => !prev ? 0 : x1 >= prev.x2 ? x1 - prev.x2 : prev.x1 >= x2 ? prev.x1 - x2 : -1;
-  const near = (x1, x2, far) => { const g = side(x1, x2); return !prev || g >= P.edgeGap0 && g <= (far ? P.edgeGap1 + U : P.edgeGap1); };
-  //   本道は本道どうしだけ避ける（寄り道の足場の下は通らなくてよい）。次の段にも、真上を避けて置ける所が残る位置を選ぶ（ジグザグが行き詰まらないように）
-  const room = (x1, x2) => { const s = P.platWs[1]; for (let a = 0; a + s <= P.W; a += U) { const g = a >= x2 ? a - x2 : x1 >= a + s ? x1 - a - s : -1; if (g >= P.edgeGap0 && g <= P.edgeGap1 + U && apart(m1, a, a + s, 0)) return true; } return false; };
-  let c = [];
-  for (const [ww, far, two] of [[w, 0, 2], [w, 1, 2], [P.platWs[1], 0, 2], [P.platWs[1], 1, 2], [w, 0, 1], [w, 1, 1], [P.platWs[1], 1, 1], [w, 0, 0], [w, 1, 0]]) {
-    c = slots(ww, (x1, x2) => near(x1, x2, far) && apart(m1, x1, x2, 0) && (!two || apart(m2, x1, x2, 0)) && (two < 2 || room(x1, x2)));
-    if (c.length) { w = ww; break; }
+  const w = pickW();
+  // 壁際の次は必ず反対へ（壁ぞいに足場が縦に並ぶと、片側連打だけで登れてしまう）
+  const sgn = C.lastCx < P.wallAvoid ? 1 : C.lastCx > P.W - P.wallAvoid ? -1 : r() < 0.5 ? -1 : 1;
+  const nearWall = C.lastCx < P.wallAvoid || C.lastCx > P.W - P.wallAvoid;
+  let cx = C.lastCx + sgn * lerp(nearWall ? P.wallShiftMin : P.rowShiftMin, P.rowShiftMax, r());
+  if (cx < w * 0.3) cx = w * 0.3 + r() * 40;
+  if (cx > P.W - w * 0.3) cx = P.W - w * 0.3 - r() * 40;
+  let x1 = snapX(cx - w / 2, w), x2 = x1 + w;
+  if (pil && x2 > pil.x1 && x1 < pil.x2) {
+    if (C.lastCx < (pil.x1 + pil.x2) / 2) { x2 = pil.x1; x1 = x2 - w; } else { x1 = pil.x2; x2 = x1 + w; }
   }
-  if (!c.length) c = slots(w, (x1, x2) => { const g = side(x1, x2); return !prev || g >= U && g <= P.edgeGap1 + U; });
-  if (!c.length) c = slots(w, () => true);
-  const put = (x1, w, haz) => addPlat(C, x1, x1 + w, y, false, haz);
-  const p = c.length ? put(any(c), w) : null;
-  if (p) { C.lastCx = (p.x1 + p.x2) / 2; C.lastMain2 = C.lastMain; C.lastMain = p; }
+  const p = addPlat(C, x1, x2, y);
+  if (p) { C.lastCx = (p.x1 + p.x2) / 2; C.lastMain = p; }
   const row = () => C.plats.filter(q => Math.abs(q.y - y) < 1);
+  const free = (a1, w2, m) => !row().some(q => a1 + w2 > q.x1 - m && a1 < q.x2 + m);
   // 動く足場：高くなるほど増える（左右に動く・上下に動く）
   const mvRate = clamp01((C.row - P.moveFromRow) / P.moveRampRows) * P.moveMax;
   if (p && !pil && r() < mvRate) {
@@ -829,19 +814,37 @@ function genRow(C) {
     p.mv.w = Math.PI * 2 / lerp(P.movePeriod0, P.movePeriod1, r()); p.mv.ph = r() * 7;
     C.movers.push(p);
   }
-  // 1000m から：乗るとアウトのトゲ床と敵。トゲ床も同じ段・同じ幅で、本道から2マス以上はなす
+  // 1000m から：触るとアウトのトゲ床と敵。トゲ床も同じ段・同じ幅・マス目の上
   const hz = -y / P.unitPerM >= C.hazardFrom ? clamp01((-y / P.unitPerM - C.hazardFrom) / C.hazardRamp) : -1;
   if (hz >= 0 && r() < P.spikeRate0 + (P.spikeRate1 - P.spikeRate0) * hz) {
-    const w2 = pickW(), c2 = slots(w2, (x1, x2) => apart(row(), x1, x2, 2 * U) && apart(C.prevRow, x1, x2, 0));
-    if (c2.length) put(any(c2), w2, true);
+    const w2 = pickW();
+    for (let t = 0; t < 4; t++) {
+      const a1 = snapX(r() * (P.W - w2), w2);
+      if (p && a1 + w2 > p.x1 - 50 && a1 < p.x2 + 50) continue;
+      if (pil && a1 + w2 > pil.x1 && a1 < pil.x2) continue;
+      if (!free(a1, w2, 20)) continue;
+      addPlat(C, a1, a1 + w2, y, false, true); break;
+    }
   }
   if (hz >= 0 && r() < P.enemyRate0 + (P.enemyRate1 - P.enemyRate0) * hz) {
     const a = lerp(P.enemyAx0, P.enemyAx1, r()), x0 = a + 16 + r() * (P.W - 2 * a - 32);
     C.enemies.push({ x0, x: x0, y: y + gap * 0.5, a, r: P.enemyR, w: Math.PI * 2 / lerp(2.4, 4, r()), ph: r() * 7 });
   }
-  if (!pil && r() < P.extraRate) {   // 寄り道の足場
-    const w2 = pickW(), c2 = slots(w2, (x1, x2) => apart(row(), x1, x2, U) && apart(C.prevRow, x1, x2, 0));
-    if (c2.length) put(any(c2), w2);
+  if (pil && p) {
+    // 柱がある区間は反対側にも足場を置き、行き止まりを作らない
+    const left = (p.x1 + p.x2) / 2 > pil.x2, lo = left ? 0 : pil.x2, hi = left ? pil.x1 : P.W;
+    const w2 = Math.min(Math.floor((hi - lo) / U) * U, P.platWs[1]);
+    if (w2 >= U) { const a1 = left ? Math.floor((hi - w2) / U) * U : Math.ceil(lo / U) * U; if (free(a1, w2, 20)) addPlat(C, a1, a1 + w2, y); }
+  } else if (r() < P.extraRate) {
+    const w2 = pickW();
+    for (let t = 0; t < 4; t++) {
+      const a1 = snapX(r() * (P.W - w2), w2), a2 = a1 + w2;
+      if (p && a2 > p.x1 - 40 && a1 < p.x2 + 40) continue;
+      if (C.prevRow.some(q => a2 > q.x1 + 20 && a1 < q.x2 - 20)) continue;   // 1つ下の段の真上には置かない
+      if (pil && a2 > pil.x1 && a1 < pil.x2) continue;
+      if (!free(a1, w2, 20)) continue;
+      addPlat(C, a1, a2, y); break;
+    }
   }
   // 受け止め：左・中・右の列ごとに、catchRows 段以上足場が無ければ小さな足場を置く（落ちても数段で止まる）
   const colW = P.W / 3;
@@ -849,8 +852,10 @@ function genRow(C) {
     const mid = (k + 0.5) * colW;
     if (row().some(q => q.x1 < mid + 30 && q.x2 > mid - 30)) C.colLast[k] = y;
     if (C.colLast[k] - y < P.catchRows * P.rowGap) continue;
-    const w2 = P.platWs[1], c2 = slots(w2, (x1, x2) => x1 < mid && x2 > mid && apart(row(), x1, x2, U) && apart(C.prevRow, x1, x2, 0));
-    if (c2.length && put(any(c2), w2)) C.colLast[k] = y;
+    const w2 = P.platWs[1], a1 = snapX(mid - w2 / 2 + (r() - 0.5) * 40, w2);
+    if (pil && a1 + w2 > pil.x1 - 20 && a1 < pil.x2 + 20) continue;
+    if (!free(a1, w2, 30)) continue;
+    if (addPlat(C, a1, a1 + w2, y)) C.colLast[k] = y;
   }
   C.prevRow = row().filter(q => !q.block);
   C.lastY = y;
@@ -858,7 +863,7 @@ function genRow(C) {
 
 // ===== 遊びの進行 =====
 // チュートリアルのコース：0 まる（基本）、1 かぎ（スイング）、2 しかく（カベけり）。てっぺんの旗がゴール
-//   足場は下から抜けられないので、スタートの真上と、1つ下の足場の真上には置かない
+//   スタートの真上と、1つ下の足場の真上には置かない（見通しをよくする）
 const TUT_COURSES = [
   { plats: [[240, 360, -110], [60, 150, -230], [210, 330, -350], [30, 150, -470], [210, 330, -590], [30, 150, -710]], goal: [210, 330, -830] },
   { plats: [[240, 330, -150], [60, 150, -380], [240, 330, -610], [60, 150, -840]], goal: [210, 330, -1040] },
@@ -916,7 +921,6 @@ function step(G, dt) {
   if (pl.st === 'ground' && G.t - pl.landT > P.comboWindow) { pl.combo = 0; pl.flowN = 0; }   // 止まったら勢いは消える
   if (pl.st === 'ground') stepGround(G, dt);
   else if (pl.st === 'hang') stepHang(G, dt);
-  else if (pl.st === 'stuck') stepStuck(G, dt);
   else stepAir(G, dt);
   if (pl.st !== 'air' && pl.y < G.bestY) G.bestY = pl.y;   // 高さは着地・張り付き・ぶら下がりできた所で数える
   // モードの終わり方：30秒で時間切れ／1000mでゴール（どちらも迫る色はない）
@@ -951,7 +955,6 @@ function tryJump(G, a) {
   const pl = G.pl, ab = G.ab, A = P.ab, Q = P.pull, t = G.t;
   let kind = null;
   if (pl.st === 'hang') kind = 'hang';
-  else if (pl.st === 'stuck') kind = 'stuck';
   else if (pl.st === 'wall' && ab.wallOk) kind = 'wall';
   else if (pl.st === 'ground' || (pl.st === 'air' && t - pl.lastGroundT <= P.coyoteTime)) kind = 'ground';
   else if (pl.st === 'air' && a.noAir && t - pl.bounceT <= A.bounceGrace) kind = 'ground';   // 着地の前から引いていて、弾んだ直後に離した
@@ -967,7 +970,7 @@ function tryJump(G, a) {
     return true;
   }
   const into = kind === 'wall' && m.ux * pl.wallSide > Q.wallInto;   // 壁のほうを狙った
-  if (into && pl.wallHops >= ab.hops) return false;                   // よじ登りは回数まで
+  if (into && pl.wallHops >= (pl.edgeWall ? A.edgeHops : ab.hops)) return false;   // よじ登りは回数まで（画面の端は少なめ）
   const cont = kind !== 'ground' || t - pl.landT <= P.comboWindow + P.coyoteTime;
   if (!cont) pl.fever = 0;
   pl.combo = cont ? pl.combo + 1 : 1;
@@ -975,9 +978,7 @@ function tryJump(G, a) {
   const big = pl.combo >= ab.bigAt;
   const mul = (big ? ab.bigMul + ab.feverStep * Math.min(pl.fever, P.feverMax) : 1) * fl;
   const onBounce = t - pl.bounceT <= P.coyoteTime + 0.03 || (a.noAir && t - pl.bounceT <= A.bounceGrace);
-  if (kind === 'stuck') {   // 足場の裏から：ふつうのジャンプと同じ（上を狙えばそのまま足場を突き抜けて乗れる）
-    pl.vx = hx * fl; pl.vy = -vyBase * mul; pl.pass = pl.stuckOn; pl.stuckOn = null;
-  } else if (kind === 'ground') {
+  if (kind === 'ground') {
     pl.vx = hx * fl; pl.vy = -vyBase * mul;
     if (onBounce && ab.bounceJump > 0) {
       // 弾んだ瞬間に離す：続けるほど高くなる（ポヨン×n）。下に落ちたら数え直し
@@ -998,13 +999,13 @@ function tryJump(G, a) {
     const h = pl.hang, tx = Math.cos(h.phi) * h.w * h.L, ty = -Math.sin(h.phi) * h.w * h.L;
     let vx = hx * (1 + ab.hookJump) + tx * A.swingCarry, vy = -vyBase * (0.95 + ab.hookJump) * mul + Math.min(0, ty) * A.swingCarry;
     const sp = Math.hypot(vx, vy); if (sp > Q.capV) { vx *= Q.capV / sp; vy *= Q.capV / sp; }
-    pl.vx = vx; pl.vy = vy; pl.pass = h.a.plat; pl.hang = null; pl.grabCd = A.grabCd;   // つかまっていた足場には、下から抜けて乗れる
+    pl.vx = vx; pl.vy = vy; pl.hang = null; pl.grabCd = A.grabCd;
   }
   pl.face = dir || pl.face;
   if (kind !== 'wall' || !into) pl.hop = false;
   const fever = pl.fever;
   if (big) { pl.combo = 0; pl.fever++; }
-  pl.st = 'air'; pl.lastGroundT = -9; pl.bounceT = -9; pl.jumpY = pl.y; pl.bigFlight = big; pl.plat = null; if (kind !== 'stuck' && kind !== 'hang') pl.pass = null;
+  pl.st = 'air'; pl.lastGroundT = -9; pl.bounceT = -9; pl.jumpY = pl.y; pl.bigFlight = big; pl.plat = null;
   G.ev.push({ k: 'jump', flow: pl.flowN, kick: kind === 'wall' && !into ? pl.kickChain || 0 : 0, combo: big ? 3 : pl.combo, big, fever, from: kind, chain: kind === 'ground' ? pl.chain : 0, hop: !!pl.hop, pw });
   return true;
 }
@@ -1030,7 +1031,7 @@ function resolveX(G) {
 }
 function touchingWall(G, side) {
   const pl = G.pl, sh = shapeOf(G), x = pl.x + side * 1.5;
-  if (P.edgeStick && (x + sh.minL <= 0 || x + sh.maxR >= P.W)) return true;
+  if ((P.edgeStick || G.ab.stab) && (x + sh.minL <= 0 || x + sh.maxR >= P.W)) return true;   // ザクザクは画面の端にも刺さる
   return solids(G).some(b => { const e = rowExt(G, b.y1 + 0.5, b.y2); return e && x + e[1] > b.x1 && x + e[0] < b.x2; });
 }
 function supported(G) {   // 乗っている足場に、形のどこかがかかっていれば立ち続ける（高さは一番下の点に合わせる）
@@ -1066,11 +1067,11 @@ function stepAir(G, dt) {
     const side = resolveX(G);
     if (side) {
       // 壁ぞい登りの最中は頂点近くまで上がってから刺さり直す
-      // 画面の端はつかめない（端を往復するだけで登れてしまうため）。ひっつけるのはコースの柱だけ
-      const grabbable = ab.wallOk && (P.edgeStick || !pl.hitEdge);
+      // 画面の端はつかめない（端を往復するだけで登れてしまうため）。ひっつけるのはコースの柱だけ。ザクザクだけは端にも刺さる（よじ登りは edgeHops 回まで）
+      const grabbable = ab.wallOk && (P.edgeStick || !pl.hitEdge || (ab.stab && (pl.edgeN || 0) < A.edgeSticks));
       if (grabbable && pl.vy > (pl.hop ? -80 : -ab.wallEnterVy) && Math.sign(vx0) === side) {
         pl.hop = false;
-        pl.st = 'wall'; pl.wallSide = side; pl.vx = 0; pl.airLeft = ab.airJumps;
+        pl.st = 'wall'; pl.wallSide = side; pl.vx = 0; pl.airLeft = ab.airJumps; pl.edgeWall = pl.hitEdge; if (pl.hitEdge) pl.edgeN = (pl.edgeN || 0) + 1;
         if (ab.stab) { pl.vy = 0; G.ev.push({ k: 'stab', side }); }
         else { pl.vy *= 0.4; G.ev.push({ k: 'stick', side }); }
       } else if (ab.bounce > 0.3 && Math.abs(vx0) > 80) {
@@ -1102,21 +1103,7 @@ function stepAir(G, dt) {
     }
     if (hit) { pl.x = snap; land(G, hit, pl.vy, hitMb); }
   } else if (pl.vy < 0) {
-    // 足場は下から抜けられない：頭が足場の裏に当たったら止まる（角にかすっただけなら横へずらして通す）
-    //   ザクザクは裏に刺さって止まり、そこから跳ぶとその足場を突き抜けて上に乗れる
-    const sh = shapeOf(G);
-    for (const s of G.course.plats) {
-      if (s.y === 0 || s === pl.pass) continue;
-      const under = s.y + A.platThick, mt = minTop(G, s.x1, s.x2);
-      if (!isFinite(mt) || prevB - sh.H + mt < under - 0.5 || pl.y - sh.H + mt > under) continue;
-      const nx = nudge(G, s); if (nx !== null) { pl.x = nx; continue; }
-      if (ab.stab && !s.hazard && !s.block) {
-        pl.y = under + sh.H - mt; pl.stuckMt = mt; pl.vx = 0; pl.vy = 0; pl.st = 'stuck'; pl.stuckOn = s; pl.airLeft = ab.airJumps;
-        G.ev.push({ k: 'stab', side: 0, ceil: true }); return;
-      }
-      pl.y = under + sh.H - mt; pl.vy = 0; G.ev.push({ k: 'bump' }); break;
-    }
-    // 柱の底には頭をぶつけず、横へ押し出す
+    // 柱の底には頭をぶつけず、横へ押し出す（柱は足場の上に立っていて、その足場は下から通り抜けられるため）
     for (const b of solids(G)) {
       if (!(pl.y - pl.h < b.y2 && prevB - pl.h >= b.y2 - 0.5)) continue;
       const e = rowExt(G, b.y1, b.y2);
@@ -1127,11 +1114,6 @@ function stepAir(G, dt) {
   if (pl.st === 'air') tryGrab(G);
 }
 
-function nudge(G, s) {   // 頭が足場の角に少しかかっただけなら、かからなくなる位置（無ければ null）
-  const pl = G.pl;
-  for (let d = 1; d <= P.cornerNudge; d++) for (const g of pl.vx < 0 ? [-1, 1] : [1, -1]) if (!isFinite(minTop(G, s.x1, s.x2, pl.x + g * d))) return pl.x + g * d;
-  return null;
-}
 // 着地の吸い寄せ：このままだと足場を飛び越す時、横の勢いを少しずつ弱めて足場の上に降ろす
 function magnet(G, dt) {
   const pl = G.pl, g = G.ab.g, reach = pl.hw + G.ab.assist;
@@ -1152,17 +1134,17 @@ function magnet(G, dt) {
 
 function land(G, s, v, mb = 0) {
   const pl = G.pl, ab = G.ab, A = P.ab;
-  pl.gliding = false; pl.pass = null;
+  pl.gliding = false;
   if (s.goal && !G.over) { G.over = true; G.clear = true; G.ev.push({ k: 'over', why: 'goal' }); }   // チュートリアルの旗
   if (s.hazard) { pl.y = s.y + mb; pl.vy = 0; G.over = true; G.ev.push({ k: 'over', why: 'spike' }); return; }   // トゲ床に乗ったらアウト
   if (P.comboFallBreak && s.y > pl.jumpY - P.comboRise) { pl.combo = 0; pl.chain = 0; pl.fever = 0; pl.flowN = 0; }   // 跳んだ所より上に乗れなければコンボ・ポヨンは切れる   // 跳んだ所より下に降りたらコンボ・ポヨンは切れる
   if (v > A.bounceMinV && v * ab.bounce > A.bounceStopV) {
     pl.vy = -v * ab.bounce; pl.y = s.y + mb - 0.01; pl.vx *= 0.8; pl.st = 'air';
-    pl.bounceT = G.t; pl.bounceV = v; pl.landT = G.t; pl.lastGroundT = G.t; pl.wallHops = 0; pl.airLeft = ab.airJumps; pl.kickChain = 0;
+    pl.bounceT = G.t; pl.bounceV = v; pl.landT = G.t; pl.lastGroundT = G.t; pl.wallHops = 0; pl.edgeN = 0; pl.airLeft = ab.airJumps; pl.kickChain = 0;
     if (s.y < G.bestY) G.bestY = s.y;   // 弾み続ける形も、弾んだ足場の高さを記録する
     G.ev.push({ k: 'bounce', v });
   } else {
-    pl.st = 'ground'; pl.vy = 0; pl.y = s.y + mb; pl.plat = s; pl.landT = G.t; pl.wallHops = 0; pl.chain = 0; pl.airLeft = ab.airJumps; pl.kickChain = 0;
+    pl.st = 'ground'; pl.vy = 0; pl.y = s.y + mb; pl.plat = s; pl.landT = G.t; pl.wallHops = 0; pl.edgeN = 0; pl.chain = 0; pl.airLeft = ab.airJumps; pl.kickChain = 0;
     G.ev.push({ k: 'land', v });
   }
 }
@@ -1214,15 +1196,10 @@ function placeHang(pl) {
   pl.x = h.a.x + h.L * Math.sin(h.phi); pl.y = h.a.y + h.L * Math.cos(h.phi) + pl.h / 2;
   pl.vx = Math.cos(h.phi) * h.w * h.L; pl.vy = -Math.sin(h.phi) * h.w * h.L;
 }
-function stepStuck(G, dt) {   // 足場の裏に刺さっている：足場が動けばついていく
-  const pl = G.pl, s = pl.stuckOn;
-  if (s && s.mv) { pl.x += s.dx; pl.y = s.y + P.ab.platThick + pl.h - (pl.stuckMt || 0); }
-}
 function hangBlocked(G) {
   const pl = G.pl;
   if (pl.x - pl.hw < 0 || pl.x + pl.hw > P.W) return true;
-  if (solids(G).some(b => pl.x + pl.hw > b.x1 && pl.x - pl.hw < b.x2 && pl.y > b.y1 + 0.5 && pl.y - pl.h < b.y2)) return true;
-  return G.course.plats.some(s => s.y !== 0 && pl.x + pl.hw > s.x1 && pl.x - pl.hw < s.x2 && pl.y > s.y + 0.5 && pl.y - pl.h < s.y + P.ab.platThick);   // 足場も下から抜けられない
+  return solids(G).some(b => pl.x + pl.hw > b.x1 && pl.x - pl.hw < b.x2 && pl.y > b.y1 + 0.5 && pl.y - pl.h < b.y2);
 }
 function stepHang(G, dt) {
   const pl = G.pl, h = pl.hang;
@@ -1249,6 +1226,14 @@ if (!CanvasRenderingContext2D.prototype.roundRect) CanvasRenderingContext2D.prot
   const [a, b, c, d] = Array.isArray(r) ? [r[0], r[1] ?? r[0], r[2] ?? r[0], r[3] ?? r[1] ?? r[0]] : [r, r, r, r];
   this.moveTo(x + a, y); this.arcTo(x + w, y, x + w, y + h, b); this.arcTo(x + w, y + h, x, y + h, c); this.arcTo(x, y + h, x, y, d); this.arcTo(x, y, x + w, y, a); this.closePath();
 };
+// 足場：乗れる上の面だけをはっきり描き、下はうすく消えていく（下からは通り抜けられる見た目）
+function drawPlat(g, x1, x2, y, top = COL.plat, base = '47,59,102') {
+  const w = x2 - x1, gr = g.createLinearGradient(0, y, 0, y + 16);
+  gr.addColorStop(0, `rgba(${base},.32)`); gr.addColorStop(1, `rgba(${base},0)`);
+  g.fillStyle = gr; g.fillRect(x1 + 2, y + 3, w - 4, 16);
+  g.fillStyle = top; g.beginPath(); g.roundRect(x1, y, w, 5, 2.5); g.fill();
+  g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(x1 + 3, y + 1, w - 6, 1.2);
+}
 const $ = id => document.getElementById(id);
 const app = $('app'), cv = $('game'), cx = cv.getContext('2d');
 const COL = { bg1: '#7fd3ff', bg2: '#e9f8ff', card: '#ffffff', ink: '#1d2440', sub: '#5a6585', acc: '#ff4f8b', acc2: '#ffc531', plat: '#2f3b66', plat2: '#4f63a8', tide: '#e8364f', danger: '#e8364f', move: '#8ea0e8' };
@@ -1304,7 +1289,6 @@ const SFX = {
   bounce(v) { tone('sine', 240, 560, 0.13, clamp(v / 1600, 0.08, 0.26)); },
   stick() { tone('square', 230, 170, 0.05, 0.06); },
   stab() { tone('triangle', 1300, 500, 0.06, 0.17); },
-  bump() { tone('sine', 210, 120, 0.06, 0.12); },
   hook() { tone('triangle', 820, 1250, 0.07, 0.14); },
   kick() { tone('sine', 420, 840, 0.1, 0.2); },
   over() { tone('sine', 520, 110, 0.6, 0.28); },
@@ -1481,7 +1465,7 @@ let stats = null;
 // 形の数値から「〇〇型」と登り方の一言を決める（いちばん強い特徴が主役、2番目が強ければ並べる）
 // 特殊効果のひとこと（短く）
 const EFFECT_INFO = {
-  bounce: '着地の前に引いて 弾んで高く', swing: '端につかまって飛び出す', kick: '壁から壁へ キックで加速', stab: '下から刺さって 突き抜ける',
+  bounce: '着地の前に引いて 弾んで高く', swing: '端につかまって飛び出す', kick: '壁から壁へ キックで加速', stab: '壁や 画面の端に 刺さって ためる',
   high: '引いたまま待つと ためジャンプ', glide: '空中で引っぱると 滑空', air: '高いところで引くと もう1回', big: '2回目で大ジャンプ',
 };
 // 描き方の早見表：かたちの見本 → 効果
@@ -1606,7 +1590,7 @@ let aim = null;
 function canCharge() {
   if (!G || !G.ab.charge) return false;
   const st = G.pl.st, ab = G.ab;
-  return (ab.stab && (st === 'wall' || st === 'stuck')) || (ab.highJ && (st === 'ground' || st === 'stuck'));
+  return (ab.stab && st === 'wall') || (ab.highJ && st === 'ground');
 }
 function aimNow() {
   if (!aim) return null;
@@ -1683,9 +1667,8 @@ function handleEvents() {
       else { D.sq.p = -Math.min(0.7, e.v / 1800 + (G.pl.chain || 0) * 0.05); D.sq.v = 0; D.wob.v += e.v / 250; }
     }
     else if (e.k === 'stick') { SFX.stick(); D.side = e.side; D.press.p = 1.15; D.press.v = 0; D.wob.v += 3; }
-    else if (e.k === 'stab') { SFX.stab(); D.side = e.side || 1; D.quiver = 1; D.press.p = e.ceil ? 0 : 0.4; if (e.ceil) { D.sq.p = 0.3; } }
+    else if (e.k === 'stab') { SFX.stab(); D.side = e.side || 1; D.quiver = 1; D.press.p = 0.4; }
     else if (e.k === 'hook') { SFX.hook(); D.sq.p = 0.35; D.bend.v -= e.w * 3; }
-    else if (e.k === 'bump') { SFX.bump(); D.sq.p = -0.25; D.sq.v = 0; puff(G.pl.x, G.pl.y - G.pl.h, 4, '#ffffff', 90); }   // 足場の裏に頭をぶつけた
     else if (e.k === 'over') { if (e.why === 'goal') SFX.ok(); else SFX.over(); overT = 0.7; if (G.mode === 'tut') $('tut').classList.remove('on'); }
   }
   G.ev.length = 0;
@@ -1730,26 +1713,23 @@ function render(dt) {
   for (const p of G.course.plats) if (p.y > cam - 20 && p.y < cam + vh + 20 && !p.block) {
     const w = p.x2 - p.x1;
     if (p.y === 0) { cx.fillStyle = COL.plat2; cx.fillRect(p.x1, p.y, w, 6); cx.globalAlpha = 0.18; cx.fillStyle = COL.plat; cx.fillRect(p.x1, p.y + 6, w, 400); cx.globalAlpha = 1; continue; }   // 地面は軽く
-    const h = 10;
     if (p.hazard) {
       // トゲ床：ふつうの足場と同じ形の赤い台に、白いトゲを等間隔に並べる（上に乗るとアウト）
       const n = Math.max(2, Math.round(w / 15)), d = w / n;
-      cx.fillStyle = COL.danger; cx.beginPath(); cx.roundRect(p.x1, p.y, w, h, 3); cx.fill();
-      cx.fillStyle = 'rgba(0,0,0,.18)'; cx.fillRect(p.x1, p.y + h - 3, w, 3);
+      drawPlat(cx, p.x1, p.x2, p.y, COL.danger, '232,54,79');
       cx.beginPath();
       for (let i = 0; i < n; i++) { const x = p.x1 + i * d; cx.moveTo(x + 1.5, p.y + 0.5); cx.lineTo(x + d / 2, p.y - 11); cx.lineTo(x + d - 1.5, p.y + 0.5); cx.closePath(); }
       cx.fillStyle = '#ffffff'; cx.fill(); cx.lineWidth = 2; cx.lineJoin = 'round'; cx.strokeStyle = COL.danger; cx.stroke();
       continue;
     }
-    cx.fillStyle = COL.plat; cx.beginPath(); cx.roundRect(p.x1, p.y, w, h, 3); cx.fill();
-    cx.fillStyle = p.mv ? COL.move : COL.plat2; cx.beginPath(); cx.roundRect(p.x1, p.y, w, 3.5, [3, 3, 0, 0]); cx.fill();
+    drawPlat(cx, p.x1, p.x2, p.y, p.mv ? '#6f82d6' : COL.plat);
     if (p.goal) {   // チュートリアルの旗
       const fx = (p.x1 + p.x2) / 2; cx.fillStyle = COL.ink; cx.fillRect(fx - 1.5, p.y - 46, 3, 46);
       cx.fillStyle = COL.acc; cx.beginPath(); cx.moveTo(fx + 1.5, p.y - 46); cx.lineTo(fx + 28, p.y - 38); cx.lineTo(fx + 1.5, p.y - 30); cx.fill();
     }
     if (p.mv) {   // 動く向きの印
       cx.fillStyle = COL.move; cx.font = '900 9px ' + UIF; cx.textAlign = 'center'; cx.textBaseline = 'middle';
-      cx.fillText(p.mv.kind === 'h' ? '◀ ▶' : '▲▼', (p.x1 + p.x2) / 2, p.y + 6.5); cx.textAlign = 'left';
+      cx.fillText(p.mv.kind === 'h' ? '◀ ▶' : '▲▼', (p.x1 + p.x2) / 2, p.y + 11); cx.textAlign = 'left';
     }
   }
   for (const e of G.course.enemies) if (e.y > cam - 20 && e.y < cam + vh + 20) {
@@ -1760,6 +1740,10 @@ function render(dt) {
     cx.fillStyle = COL.ink; cx.beginPath(); cx.arc(e.x - 4, e.y - 2, 1.4, 0, 7); cx.arc(e.x + 4, e.y - 2, 1.4, 0, 7); cx.fill();
   }
   if (!rs.warned && -G.bestY / P.unitPerM >= G.course.hazardFrom - 30) { rs.warned = true; pop('ここから キケン！', COL.danger, 20); }
+  if (G.ab.stab) {   // ザクザク：画面の端にも刺さる印（着地するまでに使える回数が残っているときだけ濃く）
+    cx.globalAlpha = (pl.edgeN || 0) < P.ab.edgeSticks ? 0.7 : 0.2; cx.fillStyle = COL.acc2;
+    cx.fillRect(0, cam, 3, vh); cx.fillRect(P.W - 3, cam, 3, vh); cx.globalAlpha = 1;
+  }
   for (const b of G.course.blocks) if (b.y2 > cam && b.y1 < cam + vh) {
     cx.fillStyle = COL.plat; cx.fillRect(b.x1, b.y1, b.x2 - b.x1, b.y2 - b.y1);
     if (!G.ab.wallOk) continue;
@@ -2243,7 +2227,7 @@ const EFFECT_HELP = {
   bounce: ['着地すると ポヨンと弾む。弾んだ瞬間に ジャンプすると いつもより高く跳べる', '着地の少し前に 引っぱって はなす。早めに はなしても、弾んだ瞬間に 跳ぶ', '続けるほど どんどん高くなる（下の足場に落ちると 数え直し）'],
   swing: ['とがった先が ロープのように伸びて、足場の端（角）に ひっかかる', '端の近くを通ると 自動でつかまる。揺れている間に 引っぱって はなす', '前へ大きく 揺れたところで はなすと、遠くまで 飛び出せる'],
   kick: ['黄色い壁に ペタッと はりつける', 'はりついたら、壁と反対の向きへ 跳ぶように 引っぱって はなす', '壁から壁へ 続けて キックすると 加速する'],
-  stab: ['とがった先が 壁や 足場の裏に ザクッと刺さって止まる（ほかの形は 足場の裏に 頭をぶつける）', '刺さったら いっぱいに引いたまま 待つと ため。はなすと 飛び出す', '足場の裏に刺さったら 上を狙うと、そのまま 突き抜けて 上に乗れる'],
+  stab: ['とがった先が 黄色い壁や 画面の端に ザクッと刺さって 止まる（すべり落ちない）', '刺さったら いっぱいに引いたまま 待つと ため。はなすと 大きく 跳び出す', '黄色い壁は 壁のほうへ引くと よじ登れる。画面の端は 着地するまで 1回だけ'],
   high: ['地面で いっぱいに引いたまま 待つと 力がたまる', 'いっぱいに引いて、まわりの輪が 一周するまで 待ってから はなす', 'ためると ふつうより ずっと高く 跳べる'],
   glide: ['空中で 引っぱっている間は、ゆっくり落ちながら 狙った方へ 流れる', '落ちはじめたら 引っぱったまま、行きたい向きを 決める', '遠くの足場まで 横に 運べる。着地したら はなす'],
   air: ['空中で もう1回 ジャンプできる', '着地まで まだ遠いうちに 引っぱると スローになる。その間に 狙って はなす', '着地のすぐ前に 引くと 空中ジャンプにならない（バウンドを持つキャラは 弾む準備になる）'],
@@ -2310,14 +2294,14 @@ const EH_DEMO = {
     else if (t >= 2.5 && t < 2.75) S.fin = { sx: 190, sy: 100, x: 220, y: 130, up: true };
     return S;
   } },
-  stab: { T: 3.8, scene(g) { ehPlat(g, 100, 200, 70); }, draw(g, t) {   // 足場の裏に刺さり、ためて、上へ突き抜ける
-    const S = { x: 150, face: 1 }, H = ehH(), under = 80 + H;
-    if (t < 0.5) { const u = 1 - (1 - seg(t, 0, 0.5)) ** 2; S.y = EH_GY + (under - EH_GY) * u; S.cap = '① 足場の裏に ザクッと刺さる'; }
-    else if (t < 2.1) { S.y = under; S.cap = t < 0.9 ? '① 足場の裏に ザクッと刺さる' : '② いっぱいに引いて 待つと ため'; if (t < 0.9) S.pop = ['ザクッ', 150, 64]; S.ring = seg(t, 1.2, 1.9); }
-    else if (t < 2.9) { const p = arcAt(150, under, 150, 70, 50, seg(t, 2.1, 2.9)); S.y = p[1]; S.cap = '③ はなすと 上へ 突き抜ける！'; S.lines = true; S.front = true; }
-    else { S.y = 70; S.cap = '③ はなすと 上へ 突き抜ける！'; }
-    if (t > 0.9 && t < 2.1) S.fin = { sx: 230, sy: 110, x: 230, y: 110 + 60 * seg(t, 0.9, 1.2) };
-    else if (t >= 2.1 && t < 2.4) S.fin = { sx: 230, sy: 110, x: 230, y: 170, up: true };
+  stab: { T: 3.8, scene(g) { ehWall(g, 266, 300); ehPlat(g, 50, 150, 50); }, draw(g, t) {   // 壁（画面の端も）に刺さって止まり、ためて、大きく跳び出す
+    const S = { face: 1 }, R = 266 - 16;
+    if (t < 0.6) { const p = arcAt(150, EH_GY, R, 125, 40, seg(t, 0, 0.6)); S.x = p[0]; S.y = p[1]; S.cap = '① 壁や 画面の端に とびつく'; }
+    else if (t < 2.1) { S.x = R; S.y = 125; S.cap = t < 0.95 ? '② ザクッと刺さって 止まる' : '③ 引いたまま 待つと ため'; if (t < 0.95) S.pop = ['ザクッ', R - 10, 85]; S.ring = seg(t, 1.2, 1.9); }
+    else if (t < 2.8) { const p = arcAt(R, 125, 100, 50, 90, seg(t, 2.1, 2.8)); S.x = p[0]; S.y = p[1]; S.face = -1; S.cap = '④ はなすと 大きく 跳び出す！'; S.lines = true; }
+    else { S.x = 100; S.y = 50; S.face = -1; S.cap = '④ はなすと 大きく 跳び出す！'; }
+    if (t > 0.95 && t < 2.1) S.fin = { sx: 170, sy: 110, x: 170 + 30 * seg(t, 0.95, 1.25), y: 110 + 45 * seg(t, 0.95, 1.25) };
+    else if (t >= 2.1 && t < 2.4) S.fin = { sx: 170, sy: 110, x: 200, y: 155, up: true };
     return S;
   } },
   high: { T: 3.4, draw(g, t) {   // いっぱいに引いたまま待って、ためジャンプ
@@ -2364,7 +2348,7 @@ const EH_DEMO = {
   } },
 };
 function ehH() { const b = eh.bb, k = 36 / Math.max(b.w, b.h); return b.h * k; }
-function ehPlat(g, x1, x2, y) { g.fillStyle = COL.plat; g.fillRect(x1, y, x2 - x1, 12); g.fillStyle = COL.plat2; g.fillRect(x1, y, x2 - x1, 3.5); }
+function ehPlat(g, x1, x2, y) { drawPlat(g, x1, x2, y); }
 function ehWall(g, x1, x2) { g.fillStyle = COL.plat; g.fillRect(x1, 0, x2 - x1, 210); g.fillStyle = COL.acc2; g.fillRect(x1 < 150 ? x2 - 4 : x1, 0, 4, 210); }
 function ehLabel(g, txt, x, y, col = 'rgba(29,36,64,.55)') { g.font = '800 11px ' + UIF; g.textAlign = 'center'; g.textBaseline = 'bottom'; g.fillStyle = col; g.fillText(txt, x, y); g.textAlign = 'left'; }
 function ehDash(g, x1, y, x2, txt) { g.setLineDash([4, 6]); g.strokeStyle = 'rgba(29,36,64,.3)'; g.lineWidth = 2; g.beginPath(); g.moveTo(x1, y); g.lineTo(x2, y); g.stroke(); g.setLineDash([]); g.font = '800 11px ' + UIF; g.fillStyle = 'rgba(29,36,64,.5)'; g.textBaseline = 'bottom'; g.fillText(txt, x1 + 6, y - 3); }
