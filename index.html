@@ -145,6 +145,14 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 .ov h3{margin:6px 0 0;font-size:20px;font-weight:900;letter-spacing:.08em}
 .ov .ovx{position:absolute;top:8px;right:8px;color:#fff}
 .ov .sub2{margin:-6px 0 0;font-size:13px;opacity:.8;font-weight:700}
+/* モードの最初の1回だけ出す、ルールとギミックの説明 */
+#rules{justify-content:center}
+#rlList{width:min(300px,86vw);display:grid;gap:10px}
+#rlList p{margin:0;display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:center;font-size:14px;font-weight:800;line-height:1.45}
+#rlList p b{display:block;color:var(--acc2);font-size:15px}
+#rlList canvas{width:64px;height:40px;background:#cdeeff;border-radius:8px}
+#rlGoal{margin:0;font-size:15px;font-weight:900;text-align:center;line-height:1.5}
+#rlGoal small{display:block;font-size:13px;opacity:.8;font-weight:700}
 #chart,#recList,#zukList{display:grid;gap:0 12px;width:100%;max-width:340px}
 #chart{grid-template-columns:1fr 1fr}
 #recList{grid-template-columns:1fr}
@@ -294,6 +302,13 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
     <div id="recList"></div>
     <button class="ic sm ovx" aria-label="とじる"><span class="i-x"></span></button>
   </div>
+  <div class="ov" id="rules">
+    <h3 id="rlName"></h3>
+    <p id="rlGoal"></p>
+    <div id="rlList"></div>
+    <button class="main big bi" id="rlGo"><span class="i-check"></span>はじめる</button>
+    <button class="ic sm ovx" aria-label="とじる"><span class="i-x"></span></button>
+  </div>
   <div class="ov" id="effHelp">
     <h3 id="ehName"></h3>
     <div class="tabs" id="ehTabs"></div>
@@ -314,7 +329,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 <script>
 /*SIM-START*/
 // ===== ゲームの計算部分（DOM を使わない。Node の試し遊びはここだけを読み込む）=====
-const VERSION = '0.16.1';
+const VERSION = '0.17.0';
 
 // ===== 調整用パラメータ =====
 const P = {
@@ -1345,8 +1360,53 @@ $('bHelp').addEventListener('click', () => { chartUI(); howto(true); });
 $('bRec').addEventListener('click', () => { recTab('rk'); $('recs').classList.add('on'); });   // みんなのランキングを先に
 $('bZuk').addEventListener('click', () => { zukanUI(); $('zukan').classList.add('on'); });
 $('bSnd2').addEventListener('click', () => { auInit(); AU.on = !AU.on; store.set('snd', AU.on); sndLabel(); });
-$('bT30').addEventListener('click', () => { auInit(); playMode = 'time30'; goDraw(); });
-$('bTA').addEventListener('click', () => { auInit(); playMode = 'ta1000'; goDraw(); });
+$('bT30').addEventListener('click', () => { auInit(); playMode = 'time30'; rulesOrDraw(); });
+$('bTA').addEventListener('click', () => { auInit(); playMode = 'ta1000'; rulesOrDraw(); });
+// ----- モードを初めて開いたときだけ、ルールとギミックを短く説明 -----
+const RULES = {
+  time30: ['30秒アタック', '30秒で どこまで 高く登れるか', 'じぶんで描いた かたちで 挑戦'],
+  ta1000: ['1000m タイムアタック', '1000m まで 何秒で 登れるか', 'じぶんで描いた かたちで 挑戦'],
+};
+const RULE_ITEMS = [
+  ['plat', '足場', '下から すり抜けて 上に乗れる。◀▶の足場は 動く'],
+  ['spike', 'トゲ床', '乗ると アウト（' + P.modeHazardFromM + 'm から 出る）'],
+  ['enemy', '敵', 'さわると アウト。よけて登ろう'],
+  ['pull', 'ジャンプ', '引っぱって はなすと、反対へ 跳ぶ'],
+];
+function ruleIcon(c, k) {
+  const d = 2, g = c.getContext('2d'); c.width = 64 * d; c.height = 40 * d; g.setTransform(d, 0, 0, d, 0, 0);
+  if (k === 'plat') { drawPlat(g, 6, 34, 26); drawPlat(g, 36, 58, 14, '#6f82d6'); g.fillStyle = COL.move; g.font = '900 7px ' + UIF; g.textAlign = 'center'; g.fillText('◀ ▶', 47, 27); }
+  else if (k === 'spike') {
+    drawPlat(g, 8, 56, 26, COL.danger, '232,54,79'); g.beginPath();
+    for (let i = 0; i < 4; i++) { const x = 8 + i * 12; g.moveTo(x + 1.5, 26.5); g.lineTo(x + 6, 16); g.lineTo(x + 10.5, 26.5); g.closePath(); }
+    g.fillStyle = '#fff'; g.fill(); g.lineWidth = 2; g.lineJoin = 'round'; g.strokeStyle = COL.danger; g.stroke();
+  } else if (k === 'enemy') {
+    const x = 32, y = 20, r = 9; g.fillStyle = COL.danger; g.beginPath();
+    for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2, rr = i % 2 ? r : r * 1.45; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+    g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(x - 4, y - 2, 3, 0, 7); g.arc(x + 4, y - 2, 3, 0, 7); g.fill();
+    g.fillStyle = COL.ink; g.beginPath(); g.arc(x - 4, y - 2, 1.4, 0, 7); g.arc(x + 4, y - 2, 1.4, 0, 7); g.fill();
+  } else {   // 引っぱる指の印（下へ）と、跳ぶ向きの矢印（上へ）
+    g.strokeStyle = COL.acc; g.lineWidth = 2.5; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(22, 12); g.lineTo(22, 32); g.stroke(); g.setLineDash([]);
+    g.fillStyle = '#fff'; g.strokeStyle = COL.acc; g.beginPath(); g.arc(22, 32, 5, 0, 7); g.fill(); g.stroke();
+    g.strokeStyle = COL.ink; g.lineWidth = 3; g.beginPath(); g.moveTo(44, 32); g.lineTo(44, 10); g.moveTo(38, 16); g.lineTo(44, 9); g.lineTo(50, 16); g.stroke();
+  }
+}
+function rulesOrDraw() {
+  const seen = store.get('rules', {});
+  if (seen[playMode]) { goDraw(); return; }
+  const R = RULES[playMode];
+  $('rlName').textContent = R[0];
+  $('rlGoal').innerHTML = ''; $('rlGoal').append(R[1]); const sm = document.createElement('small'); sm.textContent = R[2]; $('rlGoal').append(sm);
+  $('rlList').innerHTML = '';
+  for (const [k, t, txt] of RULE_ITEMS) {
+    const p = document.createElement('p'), c = document.createElement('canvas'), sp = document.createElement('span'), b = document.createElement('b');
+    b.textContent = t; sp.append(b, txt); p.append(c, sp); $('rlList').append(p); ruleIcon(c, k);
+  }
+  $('rules').classList.add('on');
+}
+$('rules').addEventListener('pointerdown', e => e.stopPropagation());
+$('rlGo').addEventListener('click', () => { const seen = store.get('rules', {}); seen[playMode] = true; store.set('rules', seen); $('rules').classList.remove('on'); goDraw(); });
+$('rules').querySelector('.ovx').addEventListener('click', () => $('rules').classList.remove('on'));   // とじたときは、タイトルに残る（次も説明を出す）
 $('bTut').addEventListener('click', () => { auInit(); startTutorial(); });
 $('bHome').addEventListener('click', () => { if (tutI >= 0) { tutI = -1; tutLock(false); playMode = 'time30'; } show('title'); });
 function goDraw() {
