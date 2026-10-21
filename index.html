@@ -146,15 +146,21 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 .ov .ovx{position:absolute;top:8px;right:8px;color:#fff}
 .ov .sub2{margin:-6px 0 0;font-size:13px;opacity:.8;font-weight:700}
 /* モードの最初の1回だけ出す、ルールとギミックの説明 */
-#rules{justify-content:center}
-#rlList{width:min(300px,86vw);display:grid;gap:10px}
-#rlList p{margin:0;display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:center;font-size:14px;font-weight:800;line-height:1.45}
-#rlList p b{display:block;color:var(--acc2);font-size:15px}
-#rlList canvas{width:64px;height:40px;background:#cdeeff;border-radius:8px}
-#rlGoal{margin:0;font-size:15px;font-weight:900;text-align:center;line-height:1.5}
+#rules{justify-content:center;gap:clamp(12px,5vh - 9px,40px)}
+#rlList{width:min(340px,88vw);display:grid;gap:clamp(10px,6.4vh - 17px,44px);margin:clamp(0px,1.5vh,16px) 0}
+#rlList p span{word-break:keep-all;overflow-wrap:anywhere}   /* 言葉の切れ目（空白）で折り返す */
+#rlList p{margin:0;display:grid;grid-template-columns:clamp(76px,11vh,96px) 1fr;gap:12px;align-items:center;font-size:clamp(15px,2.1vh,17px);font-weight:800;line-height:1.5}
+#rlList p b{display:block;color:var(--acc2);font-size:clamp(16px,2.3vh,19px);margin-bottom:2px}
+#rlList canvas{width:100%;height:auto;aspect-ratio:64/40;background:#cdeeff;border-radius:8px}
+#rlGoal{margin:0;font-size:clamp(16px,2.3vh,19px);font-weight:900;text-align:center;line-height:1.5}
 #rlGoal small{display:block;font-size:13px;opacity:.8;font-weight:700}
 #chart,#recList,#zukList{display:grid;gap:0 12px;width:100%;max-width:340px}
 #chart{grid-template-columns:1fr 1fr}
+/* 早見表・図鑑：背の高い画面では、中央に小さく固まらないよう、行・マス・文字を画面の高さに合わせて大きく */
+#howto{justify-content:center;gap:clamp(12px,3vh - 4px,28px)}
+#chart div{padding:clamp(8px,2.6vh - 7px,18px) 2px;font-size:clamp(13px,1.8vh,15px)}
+#chart canvas{width:clamp(40px,5.6vh,50px);height:clamp(40px,5.6vh,50px)}
+#chart small{font-size:clamp(11px,1.45vh,13px)}
 #recList{grid-template-columns:1fr}
 .rec span{min-width:0}
 #recList .zkh{margin:8px 0 0;grid-column:1/-1}
@@ -185,16 +191,16 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 .rec.me{background:rgba(255,197,49,.16)}
 .rec .nm{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* 図鑑：1画面に収まる小さなマス */
-#zukan{justify-content:center;gap:8px}
+#zukan{justify-content:center;gap:clamp(8px,2.4vh - 6px,18px)}
 .zkh2{margin:4px 0 -2px;font-size:12px;font-weight:900;opacity:.75;width:100%;max-width:340px}
-.zg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;width:100%;max-width:340px}
+.zg{display:grid;grid-template-columns:repeat(5,1fr);gap:clamp(6px,2vh - 6px,16px);width:100%;max-width:340px}
 .zg.z4{grid-template-columns:repeat(4,1fr)}
 .zt{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 5px}
-.zt canvas{width:min(40px,10vw);height:min(40px,10vw);background:#fff}
-.zt span{font-size:10px;font-weight:800;line-height:1.2;text-align:center;white-space:nowrap}
+.zt canvas{width:min(64px,15vw,8vh);height:min(64px,15vw,8vh);background:#fff}
+.zt span{font-size:clamp(10px,1.35vh,12px);font-weight:800;line-height:1.2;text-align:center;white-space:nowrap}
 .zt.no canvas{background:rgba(255,255,255,.15)}
 .zt.no span{opacity:.45}
-.zkrank{margin:6px 0 0;font-size:14px;font-weight:900;text-align:center}
+.zkrank{margin:6px 0 0;font-size:clamp(14px,2vh,17px);font-weight:900;text-align:center}
 .zkrank small{display:block;font-size:11px;opacity:.7;font-weight:700}
 .zkh{grid-column:1/3;margin:6px 0 -2px;font-size:13px;font-weight:900;opacity:.8}
 .zk canvas:empty{}
@@ -329,7 +335,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 <script>
 /*SIM-START*/
 // ===== ゲームの計算部分（DOM を使わない。Node の試し遊びはここだけを読み込む）=====
-const VERSION = '0.17.0';
+const VERSION = '0.17.1';
 
 // ===== 調整用パラメータ =====
 const P = {
@@ -1368,7 +1374,7 @@ const RULES = {
   ta1000: ['1000m タイムアタック', '1000m まで 何秒で 登れるか', 'じぶんで描いた かたちで 挑戦'],
 };
 const RULE_ITEMS = [
-  ['plat', '足場', '下から すり抜けて 上に乗れる。◀▶の足場は 動く'],
+  ['plat', '足場', '下から すり抜けて 上に乗れる。動く足場も ある'],
   ['spike', 'トゲ床', '乗ると アウト（' + P.modeHazardFromM + 'm から 出る）'],
   ['enemy', '敵', 'さわると アウト。よけて登ろう'],
   ['pull', 'ジャンプ', '引っぱって はなすと、反対へ 跳ぶ'],
