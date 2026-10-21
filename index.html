@@ -337,7 +337,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 <script>
 /*SIM-START*/
 // ===== ゲームの計算部分（DOM を使わない。Node の試し遊びはここだけを読み込む）=====
-const VERSION = '0.18.0';
+const VERSION = '0.18.1';
 
 // ===== 調整用パラメータ =====
 const P = {
@@ -2047,11 +2047,11 @@ const ONLINE = /^https?:$/.test(location.protocol);
 function playLog(why) {   // 1回の遊びが終わったとき（チュートリアルの各段・途中でやめた回も）
   if (!ONLINE || !G || !stats) return;
   const a = new Uint8Array(8); crypto.getRandomValues(a); const e = [...a].map(x => x.toString(16).padStart(2, '0')).join('');   // この回の番号（送り直しで二重に数えない）
-  const f = store.get('played', false) ? 0 : 1; store.set('played', true);   // その端末で初めて遊んだ回
+  const f = store.get('played', false) ? 0 : 1;   // その端末で初めて遊んだ回（届いたと分かってから「遊んだ」と覚える。届かなければ次も初回として送る）
   const ef = stats.effects.map(x => x.id), key = JSON.stringify(packStrokes(strokes)), tpl = TEMPLATES.some(t => JSON.stringify(packStrokes(t.strokes)) === key);
   const l = { mode: G.mode === 'endless' ? 'normal' : G.mode, why, m: Math.floor(-G.bestY / P.unitPerM), t: +G.t.toFixed(2), clear: !!G.clear, n: stats.type, e1: ef[0], e2: ef[1],
     src: tpl ? 'tpl' : 'own', ext: Math.round(Math.max(stats.bbox.w, stats.bbox.h)), stage: G.mode === 'tut' ? tutI : undefined };
-  try { fetch('/api/play', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ e, f, v: VERSION, l }), keepalive: true }).catch(() => { }); } catch (err) { }
+  try { fetch('/api/play', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ e, f, v: VERSION, l }), keepalive: true }).then(r => { if (r.ok && f) store.set('played', true); }).catch(() => { }); } catch (err) { }
 }
 function endGame() {
   aim = null; playLog(rs.why || 'quit');

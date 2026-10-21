@@ -174,6 +174,8 @@ const hasIp=req=>!!req.headers.get('cf-connecting-ip');
 async function rateHas(req,tag){return hasIp(req)&&!!(await caches.default.match(rateKey(req,tag)));}
 async function rateMark(req,tag,sec){if(hasIp(req))await caches.default.put(rateKey(req,tag),new Response('1',{headers:{'cache-control':'max-age='+sec}}));}
 async function busy(req,tag,sec){if(await rateHas(req,tag))return true;await rateMark(req,tag,sec);return false;}
+// 回数で止める：同じ IP から sec 秒の間に max 回まで。スマホ回線や Wi-Fi は1つの IP を大勢で使うので、間隔ではなく回数で見る
+async function tooMany(req,tag,max,sec){if(!hasIp(req))return false;const k=rateKey(req,tag),r=await caches.default.match(k),n=r?(+(await r.text())||0):0;if(n>=max)return true;await caches.default.put(k,new Response(String(n+1),{headers:{'cache-control':'max-age='+sec}}));return false;}
 
 async function rank(req,env){
   if(req.method==='GET'){try{return json(await board(env).view());}catch(e){return json({error:'server',err:errText(e)},500);}}
@@ -189,7 +191,7 @@ async function rank(req,env){
 
 async function play(req,env){
   if(req.method!=='POST')return json({error:'method'},405);
-  if(await busy(req,'play',2))return json({ok:false},429);   // 2秒より短い間隔の連打は数えない
+  if(await tooMany(req,'play',60,60))return json({ok:false},429);   // 同じ IP から1分に60回をこえる分は数えない（同じ回線のほかの人は止めない）
   let b={};try{b=await req.json();}catch(e){}
   b=b&&typeof b==='object'?b:{};
   const eid=typeof b.e==='string'&&/^[0-9a-f]{16,32}$/.test(b.e)?b.e:'',L=cleanLog(b.l,b.v);
@@ -286,7 +288,7 @@ async function statsBody(env,k,a,id,ver){
   const rk=rows.map(({e,m,tags})=>{const d=new Date(e.t+9*3600e3);return `<tr><td class="l">${esc(e.u||'ななし')}<small>${esc(MODE_WORD[m])}　${esc(e.n)}　${esc(e.e.map(x=>EFF_WORD[x]||x).join('×'))}　${d.getUTCMonth()+1}/${d.getUTCDate()}　${esc(tags.join('・'))}</small></td><td>${m==='ta1000'?e.s.toFixed(2)+'秒':e.s+'m'}</td>
 <td><form method="post" action="/stats" onsubmit="return confirm('この記録をランキングから消します。よろしいですか？')">${hk}<input type="hidden" name="a" value="del"><input type="hidden" name="id" value="${esc(e.id)}"><button>消す</button></form></td></tr>`;}).join('');
   return page(`${msgHtml(r)}
-<div class="t"><div>プレイ回数<b>${st.plays.toLocaleString()}</b></div><div>プレイした人<b>${st.players.toLocaleString()}</b></div><div>ランキングの人<b>${rows.length.toLocaleString()}</b></div></div>
+<div class="t"><div>プレイ回数<b>${st.plays.toLocaleString()}</b></div><div>プレイした人<b>${st.players.toLocaleString()}</b></div><div>ランキング登録<b>${rows.length.toLocaleString()}</b></div></div>
 <table><tr><th>日付（日本時間）</th><th>回数</th><th>新しい人</th></tr>${tr}</table>
 <p><small>回数は、遊び終わった回（チュートリアルの各段・途中でやめた回も入る）。人数は「その端末で初めて遊んだ回」を数えたもの。ブラウザの記録を消すと、同じ人でも新しい人として数え直されます。</small></p>
 <form class="k" method="post" action="/stats" onsubmit="return confirm('プレイ回数・人数・記録を0に戻します（ランキングは消えません）。よろしいですか？')">${hk}<input type="hidden" name="a" value="reset"><button>集計をリセット</button></form>
