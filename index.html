@@ -32,6 +32,7 @@ button.main{background:var(--acc);color:#fff;box-shadow:0 4px 0 #b8255c}
 
 button.big{font-size:20px;padding:15px 0;width:min(260px,72vw)}
 button.sec{background:rgba(255,255,255,.85);width:min(260px,72vw)}
+button.sec.locked{background:rgba(255,255,255,.4);color:rgba(29,36,64,.45);box-shadow:none}   /* まだ遊べないモード（押すと条件を出す） */
 button.on{background:var(--ink);color:#fff}
 button.bi{display:inline-flex;align-items:center;justify-content:center;gap:8px}
 button.bi svg{flex:none}
@@ -223,7 +224,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
   #resCv{width:110px;height:110px}
   button.sec{padding:10px 24px}
 }
-.toast{position:absolute;left:50%;bottom:16%;transform:translateX(-50%);background:var(--ink);color:#fff;font-weight:900;font-size:14px;padding:9px 16px;z-index:20;pointer-events:none;animation:pin .2s ease-out}
+.toast{position:absolute;left:50%;bottom:16%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);text-align:center;white-space:pre-line;line-height:1.5;background:var(--ink);color:#fff;font-weight:900;font-size:14px;padding:9px 16px;z-index:20;pointer-events:none;animation:pin .2s ease-out}
 </style>
 </head>
 <body>
@@ -237,6 +238,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
     <div class="col">
       <button class="main big bi" id="bT30"><span class="i-timer"></span>30秒アタック</button>
       <button class="sec bi" id="bTA"><span class="i-flag"></span>1000m タイムアタック</button>
+      <button class="sec bi" id="bEnd"><span class="i-lock"></span>エンドレス</button>
       <button class="sec bi" id="bTut"><span class="i-hand"></span>チュートリアル</button>
     </div>
     <div class="icons">
@@ -335,7 +337,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 <script>
 /*SIM-START*/
 // ===== ゲームの計算部分（DOM を使わない。Node の試し遊びはここだけを読み込む）=====
-const VERSION = '0.17.4';
+const VERSION = '0.18.0';
 
 // ===== 調整用パラメータ =====
 const P = {
@@ -1329,6 +1331,8 @@ const ICON = {
   x: SV('<path d="M6 6l12 12M18 6L6 18"/>'),
   save: SV('<path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 19h14"/>'),
   xlogo: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>',   // X に投稿するボタンの印（ほかの線のアイコンと太さがそろうよう、塗りで少し小さく）
+  lock: SV('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'),
+  inf: SV('<path d="M7 9a3 3 0 1 0 0 6c2.5 0 7.5-6 10-6a3 3 0 1 1 0 6c-2.5 0-7.5-6-10-6z"/>'),
   share: SV('<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/>'),
   timer: SV('<circle cx="12" cy="13.5" r="7.5"/><path d="M12 10v3.5l2.5 2M9.5 3h5M12 3v2.5"/>'),
   flag: SV('<path d="M6 21V4"/><path d="M6 4h12l-2.5 4L18 12H6"/>'),
@@ -1345,7 +1349,7 @@ const ICON = {
 document.querySelectorAll('span[class^="i-"]').forEach(e => { const k = e.className.slice(2); if (ICON[k]) e.innerHTML = ICON[k]; });   // <span class="i-なまえ"> にアイコンを入れる
 function sndLabel() { document.querySelectorAll('.i-snd').forEach(e => e.innerHTML = AU.on ? ICON.sndOn : ICON.sndOff); }
 sndLabel();
-function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; app.append(d); setTimeout(() => d.remove(), 1600); }
+function toast(t, ms = 1600) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; app.append(d); setTimeout(() => d.remove(), ms); }
 
 // ----- 画面の切り替え -----
 let mode = 'title', playMode = 'normal';   // playMode: normal（通常）/ tutorial（チュートリアル）
@@ -1353,7 +1357,7 @@ function show(m) {
   mode = m;
   for (const [id, mm] of [['sTitle', 'title'], ['sDraw', 'draw'], ['sRes', 'res'], ['sOver', 'over']]) $(id).classList.toggle('on', m === mm);
   $('hud').classList.toggle('on', m === 'play');
-  if (m === 'title') { titleInfo(); loadMine(); }
+  if (m === 'title') { titleInfo(); loadMine(); endBtn(); }
 }
 
 // ----- 遊び方（初回だけ自動）-----
@@ -1369,20 +1373,39 @@ $('bZuk').addEventListener('click', () => { zukanUI(); $('zukan').classList.add(
 $('bSnd2').addEventListener('click', () => { auInit(); AU.on = !AU.on; store.set('snd', AU.on); sndLabel(); });
 $('bT30').addEventListener('click', () => { auInit(); playMode = 'time30'; rulesOrDraw(); });
 $('bTA').addEventListener('click', () => { auInit(); playMode = 'ta1000'; rulesOrDraw(); });
+// エンドレス：30秒アタックを最後まで（タイムアップまで）遊びきり、1000m タイムアタックでゴールすると解放
+const cleared = m => m === 'time30' ? store.get('clr_time30', false) || store.get('recs_time30', []).some(r => r.t >= P.timeLimit - 0.05) : store.get('best_ta1000', 0) > 0;
+const endOpen = () => cleared('time30') && cleared('ta1000');
+function endBtn() {
+  const open = endOpen(), b = $('bEnd'); b.classList.toggle('locked', !open);
+  b.innerHTML = (open ? ICON.inf : ICON.lock) + 'エンドレス'; b.setAttribute('aria-label', open ? 'エンドレス' : 'エンドレス（まだ遊べない）');
+}
+$('bEnd').addEventListener('click', () => {
+  auInit();
+  if (!endOpen()) { toast('「30秒アタック」と「1000m タイムアタック」を\nクリアで解放！', 2600); return; }
+  playMode = 'normal'; rulesOrDraw();
+});
 // ----- モードを初めて開いたときだけ、ルールとギミックを短く説明 -----
 const RULES = {
   time30: ['30秒アタック', '30秒で どこまで 高く登れるか', 'じぶんで描いた かたちで 挑戦'],
   ta1000: ['1000m タイムアタック', '1000m まで 何秒で 登れるか', 'じぶんで描いた かたちで 挑戦'],
+  normal: ['エンドレス', 'アウトに なるまで どこまでも 登る', '時間の 制限は ない'],
 };
 const RULE_ITEMS = [
   ['plat', '足場', '下から すり抜けて 上に乗れる。動く足場も ある'],
-  ['spike', 'トゲ床', '乗ると アウト（' + P.modeHazardFromM + 'm から 出る）'],
+  ['spike', 'トゲ床', m => '乗ると アウト（' + (m === 'normal' ? P.hazardFromM : P.modeHazardFromM) + 'm から 出る）'],
   ['enemy', '敵', 'さわると アウト。よけて登ろう'],
-  ['pull', 'ジャンプ', '引っぱって はなすと、反対へ 跳ぶ'],
+  ['pull', 'ジャンプ', '引っぱって はなすと、反対へ 跳ぶ', m => m !== 'normal'],
+  ['tide', 'せまる赤', '下から せまる。追いつかれると アウト', m => m === 'normal'],
 ];
 function ruleIcon(c, k) {
   const d = 2, g = c.getContext('2d'); c.width = 64 * d; c.height = 40 * d; g.setTransform(d, 0, 0, d, 0, 0);
-  if (k === 'plat') { drawPlat(g, 6, 34, 26); drawPlat(g, 36, 58, 14, '#6f82d6'); g.fillStyle = COL.move; g.font = '900 7px ' + UIF; g.textAlign = 'center'; g.fillText('◀ ▶', 47, 27); }
+  if (k === 'tide') {   // 下からせまる赤い波
+    g.fillStyle = COL.tide; g.globalAlpha = 0.9; g.beginPath(); g.moveTo(0, 40);
+    for (let x = 0; x <= 64; x += 4) g.lineTo(x, 24 + Math.sin(x * 0.25) * 2.5);
+    g.lineTo(64, 40); g.fill(); g.globalAlpha = 1;
+    g.strokeStyle = COL.danger; g.lineWidth = 2.5; g.beginPath(); g.moveTo(32, 18); g.lineTo(32, 6); g.moveTo(27, 11); g.lineTo(32, 5); g.lineTo(37, 11); g.stroke();
+  } else if (k === 'plat') { drawPlat(g, 6, 34, 26); drawPlat(g, 36, 58, 14, '#6f82d6'); g.fillStyle = COL.move; g.font = '900 7px ' + UIF; g.textAlign = 'center'; g.fillText('◀ ▶', 47, 27); }
   else if (k === 'spike') {
     drawPlat(g, 8, 56, 26, COL.danger, '232,54,79'); g.beginPath();
     for (let i = 0; i < 4; i++) { const x = 8 + i * 12; g.moveTo(x + 1.5, 26.5); g.lineTo(x + 6, 16); g.lineTo(x + 10.5, 26.5); g.closePath(); }
@@ -1405,7 +1428,9 @@ function rulesOrDraw() {
   $('rlName').textContent = R[0];
   $('rlGoal').innerHTML = ''; $('rlGoal').append(R[1]); const sm = document.createElement('small'); sm.textContent = R[2]; $('rlGoal').append(sm);
   $('rlList').innerHTML = '';
-  for (const [k, t, txt] of RULE_ITEMS) {
+  for (const [k, t, tx, only] of RULE_ITEMS) {
+    if (only && !only(playMode)) continue;
+    const txt = typeof tx === 'function' ? tx(playMode) : tx;
     const p = document.createElement('p'), c = document.createElement('canvas'), sp = document.createElement('span'), b = document.createElement('b');
     b.textContent = t; sp.append(b, txt); p.append(c, sp); $('rlList').append(p); ruleIcon(c, k);
   }
@@ -1814,17 +1839,10 @@ function render(dt) {
   for (const b of G.course.blocks) if (b.y2 > cam && b.y1 < cam + vh) {
     cx.fillStyle = COL.plat; cx.fillRect(b.x1, b.y1, b.x2 - b.x1, b.y2 - b.y1);
     if (!G.ab.wallOk) continue;
-    // ひっつける形のときだけ、壁を黄色のふちで目立たせ、初めて見えた壁には一言そえる
+    // ひっつける形のときだけ、壁を黄色のふちで目立たせる（文字は添えない）
     cx.fillStyle = COL.acc2;
     if (b.x1 > 0) cx.fillRect(b.x1, b.y1, 4, b.y2 - b.y1);
     if (b.x2 < P.W) cx.fillRect(b.x2 - 4, b.y1, 4, b.y2 - b.y1);
-    if (rs.seen.size < 3 && !rs.seen.has(b) && b.y1 > cam + 40 && b.y2 < cam + vh - 40) rs.seen.add(b);
-    if (rs.seen.has(b) && b.y1 > cam && b.y1 < cam + vh) {
-      const lx = b.x1 === 0 ? b.x2 + 6 : b.x2 >= P.W ? b.x1 - 6 : b.x2 + 6, my = b.y1 + 12;   // 壁の上端に添える
-      cx.font = '900 12px ' + UIF; cx.textAlign = b.x2 >= P.W ? 'right' : 'left'; cx.textBaseline = 'middle';
-      cx.lineWidth = 3; cx.strokeStyle = '#fff'; cx.strokeText(G.ab.stab ? '刺さる壁' : 'くっつく壁', lx, my);
-      cx.fillStyle = COL.ink; cx.fillText(G.ab.stab ? '刺さる壁' : 'くっつく壁', lx, my); cx.textAlign = 'left';
-    }
   }
   // 狙い（引っ張り中）。いっぱいまで引いている時間を数える（ため）
   if (aim) { const L0 = Math.hypot(aim.x - aim.sx, aim.y - aim.sy); aim.fullT = L0 >= P.pull.maxLen ? (aim.fullT || 0) + dt : 0; }
@@ -2042,6 +2060,8 @@ function endGame() {
   const mode = G.mode === 'endless' ? 'normal' : G.mode, m = Math.floor(-G.bestY / P.unitPerM), t = +G.t.toFixed(2), clear = !!G.clear;
   $('why').textContent = { spike: 'トゲに のった！', enemy: 'ぶつかった！', tide: 'おいつかれた！', time: 'タイムアップ！', goal: 'ゴール！' }[rs.why] || '';
   store.set('best', Math.max(store.get('best', 0), m));   // 称号・図鑑は高さの最高で
+  const wasOpen = endOpen();
+  if (mode === 'time30' && rs.why === 'time') store.set('clr_time30', true);
   let isBest = false, big, unit, rank, bestTxt;
   if (mode === 'ta1000' && clear) {
     const prev = store.get('best_ta1000', 0); isBest = !prev || t < prev; if (isBest) store.set('best_ta1000', t);
@@ -2071,6 +2091,7 @@ function endGame() {
   store.set('zk', zk);
   lastRun = run;
   show('over'); rkOverUI(); prepCard();
+  if (!wasOpen && endOpen()) setTimeout(() => toast('エンドレスが 解放された！', 2600), 600);
 }
 let lastRun = null;
 // ----- ランキング（サーバーに送るのは、なまえ・記録・形の名前・特殊効果だけ。描いた絵は送らない）-----
@@ -2152,12 +2173,14 @@ for (const [id, key] of [['rkModes', 'mode'], ['rkPers', 'per']]) $(id).addEvent
 });
 function titleInfo() {
   const a = store.get('best_time30', 0), t = store.get('best_ta1000', 0), parts = [];
-  if (a) parts.push(`30秒 ${a}m`); if (t) parts.push(`1000m ${t.toFixed(2)}秒`);
+  const e = store.get('best_normal', 0);
+  if (a) parts.push(`30秒 ${a}m`); if (t) parts.push(`1000m ${t.toFixed(2)}秒`); if (e && endOpen()) parts.push(`エンドレス ${e}m`);
   $('tBest').textContent = parts.length ? 'さいこう　' + parts.join('　') : '';
 }
 function recsUI() {
   const box = $('recList'); box.innerHTML = '';
-  for (const [mode, title] of [['time30', '30秒アタック'], ['ta1000', '1000mタイムアタック']]) {
+  for (const [mode, title] of [['time30', '30秒アタック'], ['ta1000', '1000mタイムアタック'], ['normal', 'エンドレス']]) {
+    if (mode === 'normal' && !endOpen()) continue;
     const h = document.createElement('p'); h.className = 'zkh'; h.textContent = title; box.append(h);
     const recs = store.get('recs_' + mode, []);
     if (!recs.length) { const e = document.createElement('p'); e.className = 'empty'; e.textContent = 'まだ記録がありません'; box.append(e); continue; }
