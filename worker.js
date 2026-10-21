@@ -120,8 +120,13 @@ export class Board extends DurableObject{
     return {plays:m.get('plays')||0,players:m.get('players')||0,days:rows.map(d=>({d,plays:m.get('plays:'+d)||0,players:m.get('players:'+d)||0}))};
   }
   // 集計（plays… と players… で始まる値）と記録を消す。ランキングは残す
-  async resetStats(){
-    const s=this.ctx.storage,ks=[];
+  //   seq はリセットのボタンに持たせた1回きりの番号。画面の再読み込みでフォームが送り直されても、同じ番号では2度目を消さない（-1 を返す）
+  async resetSeq(){return (await this.ctx.storage.get('rseq'))||0;}
+  async resetStats(seq){
+    const s=this.ctx.storage,cur=(await s.get('rseq'))||0;
+    if(seq!==cur)return -1;
+    await s.put({rseq:cur+1});
+    const ks=[];
     for(const p of ['plays','players'])ks.push(...(await s.list({prefix:p})).keys());
     for(let i=0;i<ks.length;i+=128)await s.delete(ks.slice(i,i+128));
     s.sql.exec('DELETE FROM plays_log');
@@ -230,8 +235,8 @@ button{font:inherit;font-weight:700;padding:8px 14px;border:0;background:#1d2440
 table.an th,table.an td{white-space:nowrap;font-size:12px;padding:5px 5px}.sc{overflow-x:auto}`;
 const page=body=>new Response(`<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>集計｜おえかきジャンプ</title><style>${CSS}</style></head><body>
 <h1>おえかきジャンプ 集計</h1>${body}</body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-frame-options':'DENY','referrer-policy':'no-referrer','x-robots-tag':'noindex'}});
-const MSG={ok:'集計を0に戻しました。',del:'ランキングから1件消しました。',gone:'その記録はもうランキングにありません。',ng:'合言葉が違います。',busy:'少し待ってからもう一度入れてください。',switch:'更新の切り替え中です。1〜2分たってから、もう一度開いてください。',nokey:'合言葉（ADMIN_KEY）が Cloudflare に登録されていません。'};
-const msgHtml=r=>MSG[r]?`<p class="m${['ok','del'].includes(r)?'':' ng'}">${MSG[r]}</p>`:'';
+const MSG={ok:'集計を0に戻しました。',again:'リセットは もう済んでいます（画面の再読み込みでは、もう一度は消しません）。',del:'ランキングから1件消しました。',gone:'その記録はもうランキングにありません。',ng:'合言葉が違います。',busy:'少し待ってからもう一度入れてください。',switch:'更新の切り替え中です。1〜2分たってから、もう一度開いてください。',nokey:'合言葉（ADMIN_KEY）が Cloudflare に登録されていません。'};
+const msgHtml=r=>MSG[r]?`<p class="m${['ok','del','again'].includes(r)?'':' ng'}">${MSG[r]}</p>`:'';
 const loginPage=r=>page(`${msgHtml(r)}<form method="post" action="/stats"><input type="password" name="k" placeholder="合言葉" autocomplete="current-password" required autofocus><input type="hidden" name="a" value="view"><button>開く</button></form>`);
 const pct=(a,b)=>b?Math.round(a/b*100)+'%':'-';
 const nv=x=>x===null||x===undefined?'-':String(x);
@@ -272,11 +277,12 @@ async function stats(req,env){
     try{return new Response('\ufeff'+await board(env).csv(),{headers:{'content-type':'text/csv; charset=utf-8','content-disposition':'attachment; filename="oekaki_jump_plays.csv"','cache-control':'no-store'}});}
     catch(e){return loginPage('switch');}
   }
-  try{return await statsBody(env,k,a,id,ver);}catch(e){return loginPage('switch');}   // 公開し直した直後は、保存先だけ古い版のことがある
+  const rs=Number(f&&f.get('rs'));
+  try{return await statsBody(env,k,a,id,ver,rs);}catch(e){return loginPage('switch');}   // 公開し直した直後は、保存先だけ古い版のことがある
 }
-async function statsBody(env,k,a,id,ver){
+async function statsBody(env,k,a,id,ver,rs){
   const b=board(env);let r='';
-  if(a==='reset'){await b.resetStats();r='ok';}
+  if(a==='reset')r=(await b.resetStats(rs))<0?'again':'ok';
   else if(a==='del'&&/^[0-9a-f]{8}$/.test(id))r=(await b.remove(id))?'del':'gone';
   const st=await b.stats(30),view=await b.view(),an=b.analyze(ver),A=await an;
   const hk=`<input type="hidden" name="k" value="${esc(k)}">`;
@@ -291,7 +297,7 @@ async function statsBody(env,k,a,id,ver){
 <div class="t"><div>プレイ回数<b>${st.plays.toLocaleString()}</b></div><div>プレイした人<b>${st.players.toLocaleString()}</b></div><div>ランキング登録<b>${rows.length.toLocaleString()}</b></div></div>
 <table><tr><th>日付（日本時間）</th><th>回数</th><th>新しい人</th></tr>${tr}</table>
 <p><small>回数は、遊び終わった回（チュートリアルの各段・途中でやめた回も入る）。人数は「その端末で初めて遊んだ回」を数えたもの。ブラウザの記録を消すと、同じ人でも新しい人として数え直されます。</small></p>
-<form class="k" method="post" action="/stats" onsubmit="return confirm('プレイ回数・人数・記録を0に戻します（ランキングは消えません）。よろしいですか？')">${hk}<input type="hidden" name="a" value="reset"><button>集計をリセット</button></form>
+<form class="k" method="post" action="/stats" onsubmit="return confirm('プレイ回数・人数・記録を0に戻します（ランキングは消えません）。よろしいですか？')">${hk}<input type="hidden" name="a" value="reset"><input type="hidden" name="rs" value="${await b.resetSeq()}"><button>集計をリセット</button></form>
 ${analysisHtml(A,ver,hk)}
 <h2>ランキングの記録（${rows.length}件）</h2>
 <table>${rk||'<tr><td>まだ記録がありません</td></tr>'}</table>
