@@ -287,8 +287,8 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
     </div>
     <div id="rkBox"><div id="rkRow"><input id="rkName" maxlength="8" placeholder="なまえ（かな）" autocomplete="off" enterkeyhint="send"><button class="main bi" id="rkGo"></button></div><p id="rkMsg"></p></div>
     <button class="main big bi" id="bRetry"><span class="i-retry"></span>リスタート</button>
+    <button class="sec bi" id="bAgain"><span class="i-pencil"></span>かきなおす</button>
     <div class="icons">
-      <button class="ic" id="bAgain" aria-label="描き直す"><span class="i-pencil"></span></button>
       <button class="ic" id="bSave" aria-label="保存"><span class="i-save"></span></button>
       <button class="ic" id="bShare" aria-label="X でポスト"><span class="i-xlogo"></span></button>
       <button class="ic" id="bTitle" aria-label="タイトル"><span class="i-home"></span></button>
@@ -335,7 +335,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 <script>
 /*SIM-START*/
 // ===== ゲームの計算部分（DOM を使わない。Node の試し遊びはここだけを読み込む）=====
-const VERSION = '0.17.3';
+const VERSION = '0.17.4';
 
 // ===== 調整用パラメータ =====
 const P = {
@@ -2213,8 +2213,9 @@ function buildCard() {
   return c;
 }
 function shareText() {
-  const r = lastRun, head = r.mode === 'ta1000' && r.clear ? `1000mを ${r.t.toFixed(2)}秒！` : r.mode === 'time30' ? `30秒で ${r.m}m！` : `${r.m}m！`;
-  return `おえかきジャンプ ${head}\n称号「${r.rank}」\n${r.type}　${r.effLine}\n\n#おえかきジャンプ\n${SITE_URL}`;   // 1行に1つずつ（X でも端末の共有でも、改行はそのまま渡る）
+  const r = lastRun, head = r.mode === 'ta1000' && r.clear ? `1000mを ${r.t.toFixed(2)}秒！` : `${r.m}m！`;
+  // 「形の名前」で記録 / 称号 / 特殊効果、空の行をはさんでハッシュタグとリンク（X でも端末の共有でも、改行はそのまま渡る）
+  return `「${r.type}」で ${head}\n称号「${r.rank}」\n${(r.effLine || '').replace('特殊効果 ', '特殊効果')}\n\n#おえかきジャンプ\n\n${SITE_URL}`;
 }
 function saveCard() {   // スマホは共有の画面から「画像を保存」、PC はそのまま保存
   if (!cardFile) { toast('画像を作っています…'); return; }
