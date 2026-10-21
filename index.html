@@ -337,7 +337,7 @@ button.link{background:none;box-shadow:none;color:var(--sub);font-size:14px;padd
 <script>
 /*SIM-START*/
 // ===== ゲームの計算部分（DOM を使わない。Node の試し遊びはここだけを読み込む）=====
-const VERSION = '0.18.1';
+const VERSION = '0.18.2';
 
 // ===== 調整用パラメータ =====
 const P = {
@@ -2044,15 +2044,24 @@ const taRank = t => TA_RANKS.find(([s]) => t <= s)[1];
 const MODE_NAME = { time30: '30秒アタック', ta1000: '1000mタイムアタック', normal: 'エンドレス', tutorial: 'エンドレス' };
 // ----- 遊んだ回数の集計（送るのは、モード・終わったわけ・高さ・秒・形の名前・特殊効果・見本か自作か・描いた大きさだけ。描いた絵は送らない）-----
 const ONLINE = /^https?:$/.test(location.protocol);
-function playLog(why) {   // 1回の遊びが終わったとき（チュートリアルの各段・途中でやめた回も）
-  if (!ONLINE || !G || !stats) return;
+function playLog(why, leaving) {   // 1回の遊びが終わったとき（チュートリアルの各段・途中でやめた回・遊び途中で画面を離れた回も）。1回の遊びにつき1度だけ
+  if (!ONLINE || !G || !stats || G.logged) return;
+  G.logged = true;
   const a = new Uint8Array(8); crypto.getRandomValues(a); const e = [...a].map(x => x.toString(16).padStart(2, '0')).join('');   // この回の番号（送り直しで二重に数えない）
   const f = store.get('played', false) ? 0 : 1;   // その端末で初めて遊んだ回（届いたと分かってから「遊んだ」と覚える。届かなければ次も初回として送る）
   const ef = stats.effects.map(x => x.id), key = JSON.stringify(packStrokes(strokes)), tpl = TEMPLATES.some(t => JSON.stringify(packStrokes(t.strokes)) === key);
   const l = { mode: G.mode === 'endless' ? 'normal' : G.mode, why, m: Math.floor(-G.bestY / P.unitPerM), t: +G.t.toFixed(2), clear: !!G.clear, n: stats.type, e1: ef[0], e2: ef[1],
     src: tpl ? 'tpl' : 'own', ext: Math.round(Math.max(stats.bbox.w, stats.bbox.h)), stage: G.mode === 'tut' ? tutI : undefined };
-  try { fetch('/api/play', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ e, f, v: VERSION, l }), keepalive: true }).then(r => { if (r.ok && f) store.set('played', true); }).catch(() => { }); } catch (err) { }
+  const body = JSON.stringify({ e, f, v: VERSION, l });
+  try {
+    if (leaving && navigator.sendBeacon) { if (navigator.sendBeacon('/api/play', new Blob([body], { type: 'application/json' })) && f) store.set('played', true); return; }   // 閉じる・切り替える瞬間は、確実に出せる送り方で（返事は待てない）
+    fetch('/api/play', { method: 'POST', headers: { 'content-type': 'application/json' }, body, keepalive: true }).then(r => { if (r.ok && f) store.set('played', true); }).catch(() => { });
+  } catch (err) { }
 }
+// 遊びの途中でタブを閉じる・ほかのアプリに切り替えたときも、1回として数える（戻って続けても、二重には数えない）
+const playLeave = () => { if (mode === 'play' && G && !G.over && G.t > 0.5) playLog('quit', true); };
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') playLeave(); });
+window.addEventListener('pagehide', playLeave);
 function endGame() {
   aim = null; playLog(rs.why || 'quit');
   if (G.mode === 'tut') { if (G.clear && tut) { tutGoal(); return; } tut = null; tutI = -1; tutLock(false); $('tut').classList.remove('on'); $('bEffH').style.display = 'none'; show('title'); return; }   // チュートリアルは記録に残さない
