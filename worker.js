@@ -179,8 +179,9 @@ const hasIp=req=>!!req.headers.get('cf-connecting-ip');
 async function rateHas(req,tag){return hasIp(req)&&!!(await caches.default.match(rateKey(req,tag)));}
 async function rateMark(req,tag,sec){if(hasIp(req))await caches.default.put(rateKey(req,tag),new Response('1',{headers:{'cache-control':'max-age='+sec}}));}
 async function busy(req,tag,sec){if(await rateHas(req,tag))return true;await rateMark(req,tag,sec);return false;}
-// 回数で止める：同じ IP から sec 秒の間に max 回まで。スマホ回線や Wi-Fi は1つの IP を大勢で使うので、間隔ではなく回数で見る
-async function tooMany(req,tag,max,sec){if(!hasIp(req))return false;const k=rateKey(req,tag),r=await caches.default.match(k),n=r?(+(await r.text())||0):0;if(n>=max)return true;await caches.default.put(k,new Response(String(n+1),{headers:{'cache-control':'max-age='+sec}}));return false;}
+// 回数で止める：同じ IP から sec 秒の区切りごとに max 回まで。スマホ回線や Wi-Fi は1つの IP を大勢で使うので、間隔ではなく回数で見る
+//   区切りの番号をキーに入れて、区切りが変われば0から数え直す（期限を延ばし続けると、遊び続ける人の回数が0に戻らない）
+async function tooMany(req,tag,max,sec){if(!hasIp(req))return false;const k=rateKey(req,tag+':'+Math.floor(Date.now()/(sec*1000))),r=await caches.default.match(k),n=r?(+(await r.text())||0):0;if(n>=max)return true;await caches.default.put(k,new Response(String(n+1),{headers:{'cache-control':'max-age='+sec}}));return false;}
 
 async function rank(req,env){
   if(req.method==='GET'){try{return json(await board(env).view());}catch(e){return json({error:'server',err:errText(e)},500);}}
